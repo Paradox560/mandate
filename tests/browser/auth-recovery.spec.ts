@@ -60,3 +60,29 @@ test('access page can recover from a failed initial session request', async ({pa
   await expect(page.getByRole('alert')).toHaveCount(0);
   expect(requests).toBe(2);
 });
+
+test('embedded access opens a full-page sign-in without submitting codes in the frame', async ({page}) => {
+  const sessionRequests: string[] = [];
+  await page.context().route('**/api/session', route => {
+    sessionRequests.push(route.request().method());
+    return route.fulfill({json: {mode: 'code', authenticated: false}});
+  });
+  await page.route('**/test-auth-frame', route => route.fulfill({contentType: 'text/html', body: '<iframe title="Embedded workspace" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups" src="/access?returnTo=%2F%3Fjudge%3D1%26marketMode%3Dyahoo%23proof"></iframe>'}));
+  await page.goto('/test-auth-frame');
+  const frame = page.frameLocator('iframe[title="Embedded workspace"]');
+  const link = frame.getByRole('link', {name: 'Open workspace in a new tab', exact: true});
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link).toHaveAttribute('href', '/access?returnTo=%2F%3Fjudge%3D1%26marketMode%3Dyahoo%23proof');
+  await expect(frame.getByLabel('Demo access code')).toHaveCount(0);
+  await expect(frame.locator('form')).toHaveCount(0);
+  expect(sessionRequests).toEqual([]);
+  const popupReady = page.waitForEvent('popup');
+  await link.click();
+  const popup = await popupReady;
+  await expect(popup.getByLabel('Demo access code')).toBeVisible();
+  await expect(popup.getByRole('button', {name: 'Open workspace', exact: true})).toBeEnabled();
+  expect(sessionRequests).not.toContain('POST');
+  await popup.close();
+});
