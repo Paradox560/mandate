@@ -1,0 +1,40 @@
+# Integration contracts and verification
+
+Documented configuration as of October 17, 2026. Configured credentials, a successful request and a verified downstream result are separate states. A sample report or a local audit event is not evidence of a live integration.
+
+## Local configuration
+
+Copy `.dev.vars.example` to `.dev.vars` only when the destination does not already contain the user's configuration. The user-managed secret source is `/Users/pranavpalle/Desktop/mandate/.dev.vars`. Do not print, commit, overwrite or include its contents in logs, fixtures, screenshots or browser bundles. Keep any authorized local copy outside Git. `.gitignore` excludes `.dev.vars` and environment files while allowing the empty example.
+
+| Variable | Purpose | Default/example |
+| --- | --- | --- |
+| `NICRRON_API_KEY` | Server-side Nicrron credential | Empty in example |
+| `NICRRON_MODEL` | Pinned chat model identifier | `openai/gpt-4o-mini` |
+| `PRISM_API_KEY` | Server-side PRISM project credential | Empty in example |
+| `PRISM_PROJECT_ID` | Matching PRISM project | Empty in example |
+| `PRISM_AGENT_ID` | Stable identity for trace grouping | `mandate-research` |
+| `PRISM_ENFORCE` | Require a successful, permitting remote guardrail verdict | `false` |
+
+These are Mandate's environment names. The PRISM documentation uses `PRISMTRACE_*` in its examples; do not rename the application's variables without changing its adapter.
+
+## Nicrron
+
+Use `POST https://api.nicrron.ai/v1/chat/completions`, an `Authorization: Bearer` header, and the server-side key. The documented OpenAI SDK base URL is `https://api.nicrron.ai/v1`. A pinned model makes a demo more repeatable than automatic routing. [Quickstart](https://nicrron.ai/docs/quickstart), [authentication](https://nicrron.ai/docs/authentication), [model catalog](https://nicrron.ai/docs/models).
+
+The reviewed documentation does not explicitly guarantee chat JSON-schema enforcement or native function calling. Treat JSON output as untrusted data: parse it, validate its shape and resolve every citation against the approved corpus. A request parameter in an adapter is not proof that the gateway honors it. Record the actual model and failures; never relabel a deterministic fallback as Nicrron output.
+
+No numerical chat rate limits were verified. Display failures and apply bounded retries to transient errors. Do not publish an uptime or data-retention guarantee: the authentication, model and marketing pages contain differing provisioning and retention descriptions.
+
+## PRISM
+
+The [official documentation](https://blockconvey.com/docs) specifies `X-PRISMtrace-Key`, not bearer authentication. TypeScript uses HTTP; no npm SDK is documented. Trace examples use `https://prism.blockconvey.com/api/traces`; guardrail and knowledge-search examples use `https://api.prism.blockconvey.com/api/guardrails/evaluate` and `/api/knowledge-base/search`. Verify the adapter's configured host with a real receipt.
+
+Guardrail evaluation returns `blocked` and `evaluated`. `evaluated:false` can mean unavailable entitlement or an internal error; PRISM permits traffic by default in that case. Mandate's enforcement mode must require `evaluated === true && blocked === false`. Missing configuration, transport errors and unusable responses must stop the dependent action. Independent local order checks remain mandatory when remote enforcement is disabled.
+
+Use the same trace ID for evaluation and the submitted trace. After a remote block, emit no downstream model span or output. HTTP trace submission alone observes work after it happened; it is not permission enforcement. Guardrails and custom evaluators require the appropriate account entitlement. Preserve real request IDs and verdicts rather than manufacturing success records.
+
+## What counts as integrated
+
+There are two intended external integrations: Nicrron inference and PRISM observability/retrieval/guardrail evaluation. Count PRISM as one service, not several integrations. Synthetic quotes, fixture evidence, the paper ledger and local mandate rules are application features.
+
+Verification must produce an actual Nicrron response and an actual PRISM trace visible in the selected project. Knowledge-base sync needs a real upload/search result. Remote enforcement needs a recorded verdict and confirmation that blocked work did not proceed. Until those receipts exist, describe the relevant feature as implemented or configured, with live verification pending. Follow the proof checklist in `DEMO.md`.
