@@ -1201,3 +1201,7 @@ main { max-width: 1760px; margin: auto; padding: 23px 36px 0 24px; }
   .quote-price strong { overflow-wrap: anywhere; }
   .historical-notice { font-size: 12px; }
 }
+
+.order-source-label { display: block; width: 100%; margin-top: 3px; color: #b2c3bc; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.blocked-label:has(.order-source-label) { flex-wrap: wrap; }
+.order-list-source { display: block; margin-top: 4px; color: var(--secondary); font-size: 11px; }

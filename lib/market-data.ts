@@ -152,7 +152,7 @@ export function createMarketDataService(options: MarketDataOptions = {}) {
         const response = await request(url.toString(), {
           // Workers support manual/follow; manual prevents a redirect request.
           method: 'GET', redirect: 'manual', signal: controller.signal,
-          headers: {accept: 'application/json'},
+          headers: {accept: 'application/json', 'user-agent': 'Mandate/0.1 (private paper research prototype)'},
         });
         if (response.status === 429) throw new MarketDataError('Yahoo rate limit reached; refresh paused for five minutes.', true);
         if (response.redirected || (response.status >= 300 && response.status < 400)) fail('Yahoo redirects are not allowed.');

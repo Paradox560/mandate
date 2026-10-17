@@ -112,6 +112,7 @@ test('requests are allowlisted, cached for 60 seconds, deduplicated in flight, a
     assert.equal(url.searchParams.get('interval'), '5m');
     assert.equal(url.searchParams.get('includePrePost'), 'false');
     assert.equal(init?.redirect, 'manual');
+    assert.equal(new Headers(init?.headers).get('user-agent'), 'Mandate/0.1 (private paper research prototype)');
     assert.ok(init?.signal);
     await pending;
     return responseFor(input, clock);

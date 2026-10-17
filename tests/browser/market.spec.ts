@@ -37,6 +37,7 @@ test('Yahoo quotes expose their timestamp, delayed status, dated bars, and close
   await expect(page.locator('.quote-dateline')).toContainText('Market closed');
   await expect(page.locator('.market-feed-status')).toContainText('Last checked Oct 17, 2026, 10:30 AM ET');
   await expect(page.locator('.market-source-note')).toContainText('real-time delivery is not guaranteed');
+  await expect(page.locator('.decision-panel .order-source-label')).toHaveText('Synthetic replay');
   const chart = page.getByRole('group', { name: 'Inspect Yahoo Finance chart values' });
   await chart.press('Home');
   await expect(chart.getByRole('status')).toContainText('Oct 16, 2026, 3:50 PM ET');
@@ -49,6 +50,7 @@ test('Yahoo quotes expose their timestamp, delayed status, dated bars, and close
   await expect(page.locator('.proposal-form')).toContainText('market is closed');
   await expect(page.locator('.historical-notice')).toContainText('Source dates remain in 2025');
   await navigate(page, 'Orders');
+  await expect(page.locator('.order-list-row .order-list-source')).toHaveText('Synthetic replay');
   await expect(page.locator('.order-provenance')).toContainText('Synthetic replay');
   await expect(page.locator('.order-provenance')).toContainText('historical demo order');
 });

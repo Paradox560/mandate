@@ -10,6 +10,8 @@ The workspace refreshes every 60 seconds. Charts use real five-minute bars from 
 
 Requests are cached and deduplicated server-side. A failed refresh retains an available last-known quote with a stale marker. Missing symbols remain unavailable: Yahoo mode never substitutes synthetic prices. Rate limits trigger a cooldown. Requests reject redirects and unexpected response shapes. There is no scraping proxy, CAPTCHA bypass or rotating identity.
 
+The Worker identifies requests as `Mandate/0.1 (private paper research prototype)`. It uses manual redirect handling and rejects redirect responses; Cloudflare Workers do not accept the Fetch `redirect: 'error'` option.
+
 The UI identifies the provider, session state and actual quote time. Incomplete portfolio pricing cannot produce a complete NAV or position-weight authorization. The initial paper holdings and cost bases are demonstration fixtures; their marked value is not a verified investment performance record.
 
 ## Permissions and evidence
@@ -25,6 +27,14 @@ The research catalog still contains the explicitly dated 2025 issuer disclosures
 No paid plan or purchase is enabled. Yahoo access is unofficial; the yfinance project describes research/personal-use constraints. Free endpoint access is not a commercial redistribution license. Provider terms and customer-facing data rights need review before expanding this private prototype into a commercial product.
 
 ## Sources
+
+## Recorded verification — October 17, 2026
+
+The local Worker returned all six Yahoo quotes with status `ok`, real October 16 closing timestamps and 79 observations from that regular session. The actual feed was rendered and inspected at 1440px and 390px: all six logo images loaded, source switching worked, and neither viewport had page overflow or client errors. The unit suite passed 68 tests, the full browser suite passed 16 tests, and targeted market/browser checks passed again after the final request-header and order-source-label fixes. TypeScript and the production build passed.
+
+One request configuration produced a provider rate limit during development. The five-minute cooldown was honored; a single subsequent Worker probe with the identifying header succeeded before the complete feed was checked. This recorded success does not guarantee Yahoo uptime, future limits, or real-time delivery.
+
+## References
 
 - [yfinance project and usage notes](https://github.com/ranaroussi/yfinance)
 - [Twelve Data logo endpoint](https://twelvedata.com/docs#logo)
