@@ -1,4 +1,3 @@
-import {marketSnapshot} from './fixtures.ts';
 import type {MarketFeed, MarketMode, Quote, SymbolCode} from './types.ts';
 
 export const MARKET_INSTRUMENTS: readonly {symbol: SymbolCode; name: string; sector: string}[] = [
@@ -44,6 +43,7 @@ function epoch(value: unknown): number | null {
 function fail(message: string): never { throw new MarketDataError(message); }
 const sessionDate = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit'});
 const sessionTime = new Intl.DateTimeFormat('en-GB', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
+const sessionWeekday = new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', weekday: 'short'});
 function regularBar(timestamp: number): boolean {
   const time = sessionTime.format(timestamp);
   // Yahoo can include a final closing observation just after 16:00.
@@ -53,7 +53,8 @@ function sessionFrom(meta: ObjectValue): Session {
   const regular = object(object(meta.currentTradingPeriod)?.regular);
   const start = epoch(regular?.start);
   const end = epoch(regular?.end);
-  return start !== null && end !== null && end > start && end - start <= 12 * 60 * MINUTE ? {start, end} : null;
+  return start !== null && end !== null && end > start && end - start <= 12 * 60 * MINUTE &&
+    !['Sat', 'Sun'].includes(sessionWeekday.format(start)) && sessionDate.format(start) === sessionDate.format(end) ? {start, end} : null;
 }
 function freshness(entry: StoredQuote, now: number): Pick<Quote, 'marketState' | 'stale'> {
   const session = entry.session;
@@ -103,6 +104,7 @@ function parseChart(body: unknown, symbol: SymbolCode, now: number): StoredQuote
   const change = Math.round(((price - previousClose) / previousClose) * 10_000) / 100;
   if (!Number.isFinite(change)) fail('Yahoo returned an invalid daily price change.');
   const exchange = typeof meta.fullExchangeName === 'string' ? meta.fullExchangeName : meta.exchangeName;
+  const session = sessionFrom(meta);
   const quote: Quote = {
     ...instrument, price, previousClose,
     change,
@@ -110,11 +112,12 @@ function parseChart(body: unknown, symbol: SymbolCode, now: number): StoredQuote
     historyTimestamps: latestBars.map(bar => new Date(bar.time).toISOString()),
     timestamp: new Date(quoteTime).toISOString(), fetchedAt: new Date(now).toISOString(),
     source: 'yahoo', currency: 'USD',
+    ...(session ? {sessionStart: new Date(session.start).toISOString(), sessionEnd: new Date(session.end).toISOString()} : {}),
     ...(typeof exchange === 'string' && exchange.length <= 100 ? {exchangeName: exchange} : {}),
     // Only zero has unambiguous units; do not invent a latency promise for other values.
     ...(meta.exchangeDataDelayedBy === 0 ? {delaySeconds: 0} : {}),
   };
-  const entry = {quote, session: sessionFrom(meta)};
+  const entry = {quote, session};
   Object.assign(quote, freshness(entry, now));
   return entry;
 }
@@ -199,15 +202,7 @@ export function createMarketDataService(options: MarketDataOptions = {}) {
     }};
   }
   async function getMarketData(mode: MarketMode = 'yahoo'): Promise<MarketData> {
-    if (mode === 'replay') {
-      const clock = now();
-      const fetchedAt = new Date(clock).toISOString();
-      return {market: marketSnapshot(clock).map(quote => ({
-        ...quote, source: 'synthetic', fetchedAt, marketState: 'unknown', stale: false, currency: 'USD',
-        historyTimestamps: quote.history.map((_, index) => new Date(clock - (quote.history.length - index - 1) * 5 * MINUTE).toISOString()),
-      })), marketFeed: {mode: 'replay', provider: 'Synthetic replay', fetchedAt, status: 'ok', refreshSeconds: 5, errors: [], message: 'Generated demo prices. These are synthetic observations, not exchange data.'}};
-    }
-    if (mode !== 'yahoo') throw new Error('Unsupported market mode.');
+    if (mode !== 'yahoo') throw new Error('Synthetic replay has been retired. Yahoo Finance is the only market source.');
     if (now() < cachedUntil || now() < backoffUntil) return render();
     if (!inFlight) {
       inFlight = (async () => {

@@ -43,6 +43,8 @@ test('parser preserves actual quote time, prefers previousClose, and keeps only 
   assert.equal(quote.stale, false);
   assert.equal(quote.currency, 'USD');
   assert.equal(quote.exchangeName, 'NasdaqGS');
+  assert.equal(quote.sessionStart, '2026-10-16T13:30:00.000Z');
+  assert.equal(quote.sessionEnd, '2026-10-16T20:00:00.000Z');
 });
 
 test('parser orders bars and excludes premarket and after-hours observations', () => {
@@ -96,6 +98,9 @@ test('a Friday close stays explicitly closed on Saturday; obsolete sessions beco
   const missingSession = parseYahooChart(payload('AAPL', {currentTradingPeriod: {}}), 'AAPL', NOW);
   assert.equal(missingSession.marketState, 'unknown');
   assert.equal(missingSession.stale, true);
+  const weekendSession = parseYahooChart(payload('AAPL', {currentTradingPeriod: {regular: {start: seconds('2026-10-17T13:30:00Z'), end: seconds('2026-10-17T20:00:00Z')}}}), 'AAPL', saturday);
+  assert.equal(weekendSession.marketState, 'unknown', 'An invalid weekend period cannot authorize an open market.');
+  assert.equal(weekendSession.stale, true);
 });
 
 test('requests are allowlisted, cached for 60 seconds, deduplicated in flight, and returned copies cannot corrupt cache', async () => {
@@ -231,13 +236,9 @@ test('request timeout aborts hanging fetches and fails closed', async () => {
   assert.ok(result.marketFeed.errors.every(error => error.message === 'Yahoo request timed out.'));
 });
 
-test('replay is explicitly synthetic and never makes an upstream request', async () => {
-  const service = createMarketDataService({now: () => NOW, fetch: async () => {throw new Error('Replay must not fetch.');}});
-  const result = await service.getMarketData('replay');
-  assert.equal(result.marketFeed.mode, 'replay');
-  assert.equal(result.marketFeed.provider, 'Synthetic replay');
-  assert.equal(result.marketFeed.status, 'ok');
-  assert.equal(result.market.length, 6);
-  assert.ok(result.market.every(quote => quote.source === 'synthetic' && quote.stale === false && quote.history.length === quote.historyTimestamps!.length));
-  assert.match(result.marketFeed.message, /synthetic/);
+test('retired replay fails explicitly without inventing prices or making upstream requests', async () => {
+  let calls = 0;
+  const service = createMarketDataService({now: () => NOW, fetch: async () => {calls++; throw new Error('Replay must not fetch.');}});
+  await assert.rejects(service.getMarketData('replay'), /Synthetic replay has been retired/);
+  assert.equal(calls, 0);
 });
