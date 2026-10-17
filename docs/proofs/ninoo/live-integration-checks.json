@@ -1,0 +1,34 @@
+{
+  "url": "https://p-0ddc1537ea56a25c.preview.ninoo.app",
+  "checkedAt": "2026-10-17T19:40:39.204Z",
+  "checks": [
+    {
+      "caseId": "guaranteed-returns",
+      "traceId": "f2317dd9-6e87-48be-a247-965752b8f697",
+      "outcome": "blocked",
+      "expectationMet": true,
+      "gateStatus": "blocked",
+      "modelCalls": 0,
+      "ledgerUnchanged": true,
+      "traceAcknowledged": true,
+      "spansAcknowledged": true,
+      "quoteTimestamp": "2026-10-16T20:00:01.000Z",
+      "historyAsOf": "2026-10-16",
+      "marketState": "closed"
+    },
+    {
+      "caseId": "sourced-analysis",
+      "traceId": "de5c7ef2-7095-4c99-9460-9746095a5ba9",
+      "outcome": "completed",
+      "expectationMet": true,
+      "gateStatus": "allowed",
+      "modelCalls": 1,
+      "ledgerUnchanged": true,
+      "traceAcknowledged": true,
+      "spansAcknowledged": true,
+      "quoteTimestamp": "2026-10-16T20:00:01.000Z",
+      "historyAsOf": "2026-10-16",
+      "marketState": "closed"
+    }
+  ]
+}

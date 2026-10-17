@@ -26,6 +26,8 @@ After changes, `npm run build` produces the Worker build. `npm start` serves tha
 
 ## Present the workflow
 
+The [Ninoo judge demo](https://mandate-4489.ninoo.app/?judge=1) uses the shared demo access code instead of ChatGPT login. Its public entry opens the running Ninoo workspace; that workspace must remain available. Each browser receives a separate paper account. See [Ninoo deployment and verification](docs/NINOO.md).
+
 Start with the [judge walkthrough](https://mandate-investment-desk.pranav4096.chatgpt.site/?judge=1). Run a guaranteed-return or approval-bypass request, inspect the gate, model-call count, source snapshot and unchanged ledger, then run the permitted cited-analysis case. Risk Lab stores the actual receipts and exports JSON. PRISM Block Check and Root Cause are separate provider evidence; their recorded status never follows from a local test alone.
 
 Open [the guided presentation](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) while signed in, or use **Guided demo** from the desk. The guide uses an isolated paper account and the same actual Yahoo observations as the main desk. Create a historical strategy memo, inspect its source, propose one share, approve it, then execute during an eligible open session or explicitly queue it while closed. The guide shows the actual waiting state; it cannot simulate an opening or manufacture a fill.

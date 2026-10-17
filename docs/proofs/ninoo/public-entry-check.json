@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-17T19:57:06.841Z",
+  "publicUrl": "https://mandate-4489.ninoo.app/?judge=1",
+  "applicationUrl": "https://p-0ddc1537ea56a25c.preview.ninoo.app/?judge=1",
+  "publicEntry": 200,
+  "codeLogin": "passed",
+  "judgeUI": "loaded",
+  "removedPaths": [
+    {
+      "path": "/standalone/server.js",
+      "status": 404
+    },
+    {
+      "path": "/server/index.js",
+      "status": 404
+    },
+    {
+      "path": "/.env.ninoo.local",
+      "status": 404
+    },
+    {
+      "path": "/.ninoo/server/server.js",
+      "status": 404
+    },
+    {
+      "path": "/.ninoo/publish.json",
+      "status": 404
+    },
+    {
+      "path": "/data/mandate.sqlite",
+      "status": 404
+    }
+  ],
+  "hosting": "Public static entry opens the running Ninoo Builder workspace; workspace availability is required."
+}
