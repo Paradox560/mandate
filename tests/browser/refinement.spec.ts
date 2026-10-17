@@ -1,10 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
+import { fixture } from './fixtures';
 
 // Read-only interaction coverage. Use the persisted, source-backed MSFT memo;
 // never generate research, propose orders, or modify the paper ledger here.
 const actionRequests = new WeakMap<Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/desk?*', route => route.fulfill({ json: fixture() }));
   const requests: string[] = [];
   actionRequests.set(page, requests);
   await page.route('**/api/action', async route => {
@@ -18,7 +20,7 @@ test.afterEach(async ({ page }) => {
 });
 
 async function openDesk(page: Page) {
-  await page.goto('/?marketMode=replay');
+  await page.goto('/?marketMode=yahoo');
   // Wait for real portfolio data, rather than clicking server-rendered controls
   // before hydration has attached their event handlers.
   await expect(page.getByRole('region', { name: 'Portfolio summary' })).toBeVisible();
@@ -38,25 +40,25 @@ async function openMsftResearch(page: Page) {
 test('chart keyboard inspection announces observations and honors its boundaries', async ({ page }) => {
   await openDesk(page);
   await page.getByRole('combobox', { name: 'Select chart symbol' }).selectOption('MSFT');
-  const chart = page.getByRole('group', { name: 'Inspect synthetic chart values', exact: true });
+  const chart = page.getByRole('group', { name: 'Inspect Yahoo Finance chart values', exact: true });
   const output = chart.getByRole('status');
   await expect(chart).toHaveAccessibleDescription(/left and right arrows.*Home or End.*Escape/i);
   await expect(output).toHaveAttribute('aria-live', 'polite');
-  await expect(output).toHaveText(/^Latest price: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Latest price: \$[\d,.]+ · .+ ET$/);
   await chart.focus();
   await expect(chart).toBeFocused();
   await chart.press('ArrowLeft');
-  await expect(output).toHaveText(/^Observation 95 of 96: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Observation 78 of 79: \$[\d,.]+ · .+ ET$/);
   await chart.press('Home');
-  await expect(output).toHaveText(/^Observation 1 of 96: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Observation 1 of 79: \$[\d,.]+ · .+ ET$/);
   await chart.press('ArrowLeft');
-  await expect(output).toHaveText(/^Observation 1 of 96: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Observation 1 of 79: \$[\d,.]+ · .+ ET$/);
   await chart.press('End');
-  await expect(output).toHaveText(/^Observation 96 of 96: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Observation 79 of 79: \$[\d,.]+ · .+ ET$/);
   await chart.press('ArrowRight');
-  await expect(output).toHaveText(/^Observation 96 of 96: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Observation 79 of 79: \$[\d,.]+ · .+ ET$/);
   await chart.press('Escape');
-  await expect(output).toHaveText(/^Latest price: \$[\d,.]+$/);
+  await expect(output).toHaveText(/^Latest price: \$[\d,.]+ · .+ ET$/);
   await expect(chart).toBeFocused();
 });
 
