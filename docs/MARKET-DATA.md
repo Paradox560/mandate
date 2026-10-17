@@ -26,8 +26,6 @@ The research catalog still contains the explicitly dated 2025 issuer disclosures
 
 No paid plan or purchase is enabled. Yahoo access is unofficial; the yfinance project describes research/personal-use constraints. Free endpoint access is not a commercial redistribution license. Provider terms and customer-facing data rights need review before expanding this private prototype into a commercial product.
 
-## Sources
-
 ## Recorded verification — October 17, 2026
 
 The local Worker returned all six Yahoo quotes with status `ok`, real October 16 closing timestamps and 79 observations from that regular session. The actual feed was rendered and inspected at 1440px and 390px: all six logo images loaded, source switching worked, and neither viewport had page overflow or client errors. The unit suite passed 68 tests, the full browser suite passed 16 tests, and targeted market/browser checks passed again after the final request-header and order-source-label fixes. TypeScript and the production build passed.
