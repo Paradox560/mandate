@@ -1,4 +1,5 @@
-import type { Action, AuditEvent, DeskSnapshot, DeskState, Order, Policy, MarketMode } from './types';
+import type { Action, AuditEvent, DeskSnapshot, DeskState, Order, Policy, MarketMode, WorkspaceMode } from './types';
+import { assertDemoStarted, assertWorkspaceAction, createDemoState, workspaceMarketMode, workspaceState, workspaceStorageKey } from './demo-workspace';
 import { getMarketData } from './market-data';
 import { EVIDENCE, marketSnapshot, seededState } from './fixtures';
 import { approvalRequired, applyFill, canonicalSample, evaluateOrder, fingerprintOrder, toolPermission } from './permissions';
@@ -7,24 +8,45 @@ import { readState, saveState } from '../db/store';
 import { z } from 'zod';
 
 const policySchema=z.object({maxOrderValue:z.number().finite().min(100).max(100000),maxPositionWeight:z.number().finite().min(.01).max(1),approvalAbove:z.number().finite().min(0).max(100000),allowedSymbols:z.array(z.enum(['NVDA','MSFT','AAPL','GOOGL','AMZN','META'])).min(1).max(6),maxQuoteAgeSeconds:z.number().int().min(1).max(300),maxEvidenceAgeDays:z.number().int().min(1).max(365),requireApproval:z.boolean()}).partial().strict();
-export const actionSchema=z.object({action:z.enum(['research','propose','approve','execute','reject','policy','scenario','test_connections','sync_sources','reset']),symbol:z.string().max(8).optional(),prompt:z.string().max(2000).optional(),researchId:z.string().max(100).optional(),quantity:z.number().finite().optional(),side:z.enum(['buy','sell']).optional(),orderId:z.string().max(100).optional(),policy:policySchema.optional(),scenario:z.enum(['oversize','unauthorized','stale','tamper','unsupported']).optional(),marketMode:z.enum(['yahoo','replay']).optional()}).strict();
+export const actionSchema=z.object({action:z.enum(['research','propose','approve','execute','reject','policy','scenario','test_connections','sync_sources','reset','start_demo','demo_sample']),symbol:z.string().max(8).optional(),prompt:z.string().max(2000).optional(),researchId:z.string().max(100).optional(),quantity:z.number().finite().optional(),side:z.enum(['buy','sell']).optional(),orderId:z.string().max(100).optional(),policy:policySchema.optional(),scenario:z.enum(['oversize','unauthorized','stale','tamper','unsupported']).optional(),marketMode:z.enum(['yahoo','replay']).optional(),workspace:z.enum(['desk','demo']).optional()}).strict();
 
 function audit(state:DeskState,agent:string,tool:string,decision:AuditEvent['decision'],message:string,traceId=crypto.randomUUID(),orderId?:string,details?:Record<string,unknown>){
   const event:AuditEvent={id:crypto.randomUUID(),time:new Date().toISOString(),agent,tool,decision,message,traceId,orderId,details};
   state.audit.unshift(event);return event;
 }
 function demand(actor:string,tool:string){const check=toolPermission(actor,tool);if(!check.passed)throw new Error(check.reason);return check;}
-export async function snapshot(userId:string,config:IntegrationConfig,marketMode:MarketMode='yahoo'):Promise<DeskSnapshot>{
-  const [state, data] = await Promise.all([readState(userId), getMarketData(marketMode)]);
-  return {state,...data,evidence:EVIDENCE,connections:connections(config)};
+export async function snapshot(userId:string,config:IntegrationConfig,marketMode:MarketMode='yahoo',workspace:WorkspaceMode='desk'):Promise<DeskSnapshot>{
+  const storageKey=await workspaceStorageKey(userId,workspace);
+  const [stored, data] = await Promise.all([readState(storageKey), getMarketData(workspaceMarketMode(workspace,marketMode))]);
+  return {state:workspaceState(stored,workspace),...data,evidence:EVIDENCE,connections:connections(config),workspace};
 }
 
 export async function act(userId:string,config:IntegrationConfig,input:Action):Promise<{snapshot:DeskSnapshot;message:string}>{
   const body=actionSchema.parse(input);
-  const marketMode=body.marketMode??'yahoo';
-  let state=await readState(userId);const expected=state.version;
+  const workspace=body.workspace??'desk';
+  assertWorkspaceAction(body.action,workspace);
+  const marketMode=workspaceMarketMode(workspace,body.marketMode);
+  const storageKey=await workspaceStorageKey(userId,workspace);
+  let state=workspaceState(await readState(storageKey),workspace);const expected=state.version;
+  assertDemoStarted(body.action,workspace,state);
   let message='Updated.';let event:AuditEvent|undefined;
   const traceId=crypto.randomUUID();
+
+  if(body.action==='start_demo'){
+    demand('human-reviewer','mandate.update');
+    state=createDemoState(Date.now(),true);
+    event=audit(state,'human-reviewer','workspace.demo.start','allowed','Started a fresh isolated guided demo with synthetic replay prices. No research, proposal or fill has been completed.',traceId,undefined,{workspace:'demo',marketMode:'replay',samplePortfolio:true});
+    message='Guided demo started. Its paper ledger is isolated from your main desk.';
+  }
+
+  if(body.action==='demo_sample'){
+    demand('research-agent','research.retrieve');
+    demand('research-agent','research.compose');
+    const research=canonicalSample('MSFT',EVIDENCE,traceId);
+    state.research.unshift(research);
+    event=audit(state,'research-agent','research.compose','allowed','Created an explicit MSFT sample research note from historical issuer disclosures. No Nicrron model call was made.',traceId,undefined,{workspace:'demo',mode:'sample',model:research.model,researchId:research.id});
+    message='MSFT sample research created. This is canonical historical evidence, with no model inference.';
+  }
 
   if(body.action==='research'){
     const symbol=body.symbol??'NVDA';
@@ -63,15 +85,15 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
     }else if(body.action==='approve'){
       demand('human-reviewer','orders.approve');
       if(order.status==='blocked')throw new Error('Blocked orders cannot be approved. Fix the cause and create a new proposal.');
-      const {market}=await getMarketData(order.marketMode??'replay');
+      const {market}=await getMarketData(workspaceMarketMode(workspace,order.marketMode??'replay'));
       order.checks=evaluateOrder(order,state,market,EVIDENCE);
       if(!order.checks.every(c=>c.passed)){order.status='blocked';message='Approval stopped because the mandate checks no longer pass.';event=audit(state,'human-reviewer','orders.approve','blocked',message,traceId,order.id);}
       else{order.fingerprint=await fingerprintOrder(order,state);order.approval={fingerprint:order.fingerprint,portfolioVersion:state.portfolioVersion,policyVersion:state.policy.version,approvedAt:new Date().toISOString()};order.status='approved';event=audit(state,'human-reviewer','orders.approve','allowed','Approval bound to this exact order, portfolio revision and mandate version.',traceId,order.id,{fingerprint:order.fingerprint});message='Exact order approved. Permission and price are checked again at paper execution.';}
     }else{
       const capability=demand('execution-agent','orders.execute');
       const ledgerBefore=state.portfolioVersion;
-      const external=await prismCheck(config,{action:'execute_paper_order',symbol:order.symbol,side:order.side,quantity:order.quantity,permission:order.approval?'approved':'pending',mode:'paper',marketMode:order.marketMode??'replay'},traceId);
-      const {market}=await getMarketData(order.marketMode??'replay');order.checks=[capability,...evaluateOrder(order,state,market,EVIDENCE)];
+      const external=await prismCheck(config,{action:'execute_paper_order',symbol:order.symbol,side:order.side,quantity:order.quantity,permission:order.approval?'approved':'pending',mode:'paper',marketMode:workspaceMarketMode(workspace,order.marketMode??'replay')},traceId);
+      const {market}=await getMarketData(workspaceMarketMode(workspace,order.marketMode??'replay'));order.checks=[capability,...evaluateOrder(order,state,market,EVIDENCE)];
       const fingerprint=await fingerprintOrder(order,state);
       const executionPrice=market.find(q=>q.symbol===order.symbol)?.price??Infinity;
       const bound=order.status==='approved'&&fingerprint===order.fingerprint&&(!approvalRequired(order,state,executionPrice)||(order.approval?.fingerprint===fingerprint&&order.approval.portfolioVersion===state.portfolioVersion&&order.approval.policyVersion===state.policy.version&&Date.now()-Date.parse(order.approval.approvedAt)<=300000));
@@ -117,15 +139,15 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
     message=await syncSources(config,EVIDENCE);state.integration.knowledgeBaseSynced=true;event=audit(state,'research-agent','research.retrieve','allowed','Approved source documents uploaded to PRISM knowledge base.',traceId);
   }
   if(body.action==='reset'){
-    state=seededState();event=audit(state,'human-reviewer','workspace.reset','allowed','Reset the sample portfolio and demo records.',traceId);message='Paper workspace reset. API credentials were preserved.';
+    state=workspace==='demo'?createDemoState(Date.now(),true):seededState();event=audit(state,'human-reviewer','workspace.reset','allowed',workspace==='demo'?'Reset the isolated guided demo. No research, proposal or fill has been completed.':'Reset the sample portfolio and demo records.',traceId);message=workspace==='demo'?'Guided demo reset. Your main desk is unchanged.':'Paper workspace reset. API credentials were preserved.';
   }
-  await saveState(userId,state,expected);
+  await saveState(storageKey,state,expected);
   // Telemetry is reported separately from the transactional ledger outcome.
   // An unavailable observability service cannot undo or duplicate a committed fill.
   if(event&&body.action!=='research'&&body.action!=='test_connections'){
     const status=await traceEvent(config,event);
-    const fresh=await readState(userId);fresh.integration.prismLastStatus=status;fresh.integration.prismLastTraceId=event.traceId;
-    try{await saveState(userId,fresh,fresh.version);}catch{/* Concurrent activity wins; ledger mutation above remains committed. */}
+    const fresh=await readState(storageKey);fresh.integration.prismLastStatus=status;fresh.integration.prismLastTraceId=event.traceId;
+    try{await saveState(storageKey,fresh,fresh.version);}catch{/* Concurrent activity wins; ledger mutation above remains committed. */}
   }
-  return {snapshot:await snapshot(userId,config,marketMode),message};
+  return {snapshot:await snapshot(userId,config,marketMode,workspace),message};
 }

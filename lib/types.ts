@@ -1,5 +1,6 @@
 export type SymbolCode = 'NVDA' | 'MSFT' | 'AAPL' | 'GOOGL' | 'AMZN' | 'META';
 export type MarketMode = 'yahoo' | 'replay';
+export type WorkspaceMode = 'desk' | 'demo';
 export type Quote = {symbol:SymbolCode;name:string;sector:string;price:number;previousClose:number;change:number;history:number[];timestamp:string;source?:'yahoo'|'synthetic';fetchedAt?:string;marketState?:'open'|'closed'|'unknown';stale?:boolean;historyTimestamps?:string[];currency?:string;exchangeName?:string;delaySeconds?:number};
 export type MarketFeed = {mode:MarketMode;provider:string;fetchedAt:string|null;status:'ok'|'partial'|'unavailable';message:string;refreshSeconds:number;errors:{symbol:string;message:string}[]};
 export type Evidence = {id:string;symbol:string;title:string;url:string;publishedAt:string;period:string;text:string;metrics:Record<string,number>};
@@ -9,7 +10,7 @@ export type Check = {key:string;label:string;passed:boolean;reason:string};
 export type Order = {id:string;researchId:string;symbol:string;side:'buy'|'sell';quantity:number;price:number;notional:number;status:'blocked'|'review'|'approved'|'executed'|'rejected';checks:Check[];evidenceIds:string[];createdAt:string;traceId:string;fingerprint:string;marketMode?:MarketMode;quoteTimestamp?:string;approval?:{fingerprint:string;portfolioVersion:number;policyVersion:number;approvedAt:string};fill?:{price:number;quantity:number;time:string};scenario?:string};
 export type AuditEvent = {id:string;time:string;agent:string;tool:string;decision:'allowed'|'blocked'|'review'|'error';message:string;traceId:string;orderId?:string;details?:Record<string,unknown>};
 export type Policy = {version:number;maxOrderValue:number;maxPositionWeight:number;approvalAbove:number;allowedSymbols:string[];maxQuoteAgeSeconds:number;maxEvidenceAgeDays:number;requireApproval:boolean};
-export type DeskState = {version:number;portfolioVersion:number;cash:number;positions:{symbol:string;shares:number;costBasis:number}[];research:Research[];orders:Order[];audit:AuditEvent[];policy:Policy;createdAt:string;integration:{prismLastStatus:string;prismLastTraceId?:string;knowledgeBaseSynced:boolean}};
+export type DeskState = {version:number;portfolioVersion:number;cash:number;positions:{symbol:string;shares:number;costBasis:number}[];research:Research[];orders:Order[];audit:AuditEvent[];policy:Policy;createdAt:string;demoStartedAt?:string;integration:{prismLastStatus:string;prismLastTraceId?:string;knowledgeBaseSynced:boolean}};
 export type Connections = {nicrron:{configured:boolean;model:string};prism:{configured:boolean;enforce:boolean;projectId:string|null};mode:'paper';replayDate:string};
-export type DeskSnapshot = {state:DeskState;market:Quote[];marketFeed:MarketFeed;evidence:Evidence[];connections:Connections};
-export type Action = {action:string;symbol?:string;prompt?:string;researchId?:string;quantity?:number;side?:'buy'|'sell';orderId?:string;policy?:Partial<Policy>;scenario?:string;marketMode?:MarketMode};
+export type DeskSnapshot = {state:DeskState;market:Quote[];marketFeed:MarketFeed;evidence:Evidence[];connections:Connections;workspace?:WorkspaceMode};
+export type Action = {action:string;symbol?:string;prompt?:string;researchId?:string;quantity?:number;side?:'buy'|'sell';orderId?:string;policy?:Partial<Policy>;scenario?:string;marketMode?:MarketMode;workspace?:WorkspaceMode};
