@@ -18,8 +18,8 @@ export function portfolioValue(state:DeskState,market:Quote[]):number {
 }
 
 // An authorization is bound to the exact order, mandate version and portfolio revision.
-export async function fingerprintOrder(order:Pick<Order,'id'|'researchId'|'symbol'|'side'|'quantity'|'price'|'evidenceIds'>,state:DeskState):Promise<string>{
-  const value=JSON.stringify([order.id,order.researchId,order.symbol,order.side,order.quantity,order.price,[...order.evidenceIds].sort(),state.policy.version,state.portfolioVersion]);
+export async function fingerprintOrder(order:Pick<Order,'id'|'researchId'|'symbol'|'side'|'quantity'|'price'|'evidenceIds'|'marketMode'>,state:DeskState):Promise<string>{
+  const value=JSON.stringify([order.id,order.researchId,order.symbol,order.side,order.quantity,order.price,[...order.evidenceIds].sort(),state.policy.version,state.portfolioVersion,order.marketMode??'replay']);
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
   return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
 }
@@ -28,14 +28,21 @@ export function evaluateOrder(order:Order,state:DeskState,market:Quote[],evidenc
   const checks:Check[]=[];
   const add=(key:string,label:string,passed:boolean,reason:string)=>checks.push({key,label,passed,reason});
   const policy=state.policy,quote=market.find(q=>q.symbol===order.symbol);
+  const marketMode=order.marketMode??'replay';
   const report=state.research.find(r=>r.id===order.researchId);
   const qtyValid=Number.isSafeInteger(order.quantity)&&order.quantity>0&&order.quantity<=100000;
   const sideValid=order.side==='buy'||order.side==='sell';
   const priceValid=!!quote&&Number.isFinite(quote.price)&&quote.price>0&&Number.isFinite(order.price)&&order.price>0;
   add('parameters','Valid order parameters',qtyValid&&sideValid&&priceValid,'Positive whole shares, known symbol and finite price are required');
+  add('market_source','Bound market data source',!!quote&&(quote.source==='yahoo'?'yahoo':'replay')===marketMode,`This order uses ${marketMode==='yahoo'?'Yahoo Finance':'synthetic replay'} prices; switching the display source cannot change it`);
+  if(marketMode==='yahoo'){
+    add('market_session','Regular market session',quote?.marketState==='open','Yahoo-priced paper execution requires an open regular market session');
+    const complete=state.positions.filter(p=>p.shares>0).every(p=>{const q=market.find(item=>item.symbol===p.symbol);const quoteAge=q?(now-Date.parse(q.timestamp))/1000:Infinity;return q?.source==='yahoo'&&!q.stale&&Number.isFinite(q.price)&&q.price>0&&quoteAge>=-2&&quoteAge<=policy.maxQuoteAgeSeconds;});
+    add('portfolio_quotes','Complete portfolio pricing',complete,`Every holding needs a Yahoo price within ${policy.maxQuoteAgeSeconds}s before position limits can be evaluated`);
+  }
   add('allowlist','Approved security',policy.allowedSymbols.includes(order.symbol),`${order.symbol} ${policy.allowedSymbols.includes(order.symbol)?'is':'is not'} in the mandate universe`);
   const age=quote?(now-Date.parse(quote.timestamp))/1000:Infinity;
-  add('freshness','Fresh market snapshot',age>=-2&&age<=policy.maxQuoteAgeSeconds,`Quote must be within ${policy.maxQuoteAgeSeconds}s; age ${Number.isFinite(age)?Math.max(0,Math.round(age)):'unknown'}s`);
+  add('freshness','Fresh market snapshot',!quote?.stale&&age>=-2&&age<=policy.maxQuoteAgeSeconds,`Provider quote must be within ${policy.maxQuoteAgeSeconds}s; age ${Number.isFinite(age)?Math.max(0,Math.round(age)):'unknown'}s${quote?.stale?'; source marked stale':''}`);
   const slippage=priceValid?Math.abs(quote!.price-order.price)/order.price:Infinity;
   add('price','Price drift within 1%',slippage<=.01,'Reference price must stay within 1% of the executable quote');
   const notional=priceValid&&qtyValid?quote!.price*order.quantity:Infinity;
@@ -47,9 +54,9 @@ export function evaluateOrder(order:Order,state:DeskState,market:Quote[],evidenc
   add('concentration','Position concentration',remaining>=0&&weight<=policy.maxPositionWeight,`${Number.isFinite(weight)?(weight*100).toFixed(1):'invalid'}% after trade · ${(policy.maxPositionWeight*100).toFixed(0)}% limit`);
   const validEvidence=report&&report.symbol===order.symbol&&report.claims.length>0&&report.claims.every(c=>c.supported&&c.evidenceIds.length>0&&c.evidenceIds.every(id=>order.evidenceIds.includes(id)&&evidence.some(e=>e.id===id&&e.symbol===order.symbol))&&c.evidenceIds.some(id=>evidence.find(e=>e.id===id)?.text===c.text))&&order.evidenceIds.length>0&&order.evidenceIds.every(id=>report.evidenceIds.includes(id)&&evidence.some(e=>e.id===id&&e.symbol===order.symbol));
   add('evidence','Source-backed research',!!validEvidence,'Every factual claim must refer to an approved issuer disclosure for this security');
-  const asOf=Date.parse(REPLAY_DATE+'T23:59:59Z');
+  const asOf=marketMode==='yahoo'?now:Date.parse(REPLAY_DATE+'T23:59:59Z');
   const freshEvidence=order.evidenceIds.length>0&&order.evidenceIds.every(id=>{const e=evidence.find(x=>x.id===id);const days=e?(asOf-Date.parse(e.publishedAt))/86400000:Infinity;return days>=0&&days<=policy.maxEvidenceAgeDays;});
-  add('source_age','Evidence date policy',freshEvidence,`Sources must be within ${policy.maxEvidenceAgeDays} days of historical replay date ${REPLAY_DATE}`);
+  add('source_age','Evidence date policy',freshEvidence,`Sources must be within ${policy.maxEvidenceAgeDays} days of ${marketMode==='yahoo'?'the current date':`historical replay date ${REPLAY_DATE}`}`);
   return checks;
 }
 

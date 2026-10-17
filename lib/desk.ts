@@ -1,4 +1,5 @@
-import type { Action, AuditEvent, DeskSnapshot, DeskState, Order, Policy } from './types';
+import type { Action, AuditEvent, DeskSnapshot, DeskState, Order, Policy, MarketMode } from './types';
+import { getMarketData } from './market-data';
 import { EVIDENCE, marketSnapshot, seededState } from './fixtures';
 import { approvalRequired, applyFill, canonicalSample, evaluateOrder, fingerprintOrder, toolPermission } from './permissions';
 import { connections, prismCheck, runResearch, syncSources, testConnections, traceEvent, type IntegrationConfig } from './integrations';
@@ -6,17 +7,21 @@ import { readState, saveState } from '../db/store';
 import { z } from 'zod';
 
 const policySchema=z.object({maxOrderValue:z.number().finite().min(100).max(100000),maxPositionWeight:z.number().finite().min(.01).max(1),approvalAbove:z.number().finite().min(0).max(100000),allowedSymbols:z.array(z.enum(['NVDA','MSFT','AAPL','GOOGL','AMZN','META'])).min(1).max(6),maxQuoteAgeSeconds:z.number().int().min(1).max(300),maxEvidenceAgeDays:z.number().int().min(1).max(365),requireApproval:z.boolean()}).partial().strict();
-export const actionSchema=z.object({action:z.enum(['research','propose','approve','execute','reject','policy','scenario','test_connections','sync_sources','reset']),symbol:z.string().max(8).optional(),prompt:z.string().max(2000).optional(),researchId:z.string().max(100).optional(),quantity:z.number().finite().optional(),side:z.enum(['buy','sell']).optional(),orderId:z.string().max(100).optional(),policy:policySchema.optional(),scenario:z.enum(['oversize','unauthorized','stale','tamper','unsupported']).optional()}).strict();
+export const actionSchema=z.object({action:z.enum(['research','propose','approve','execute','reject','policy','scenario','test_connections','sync_sources','reset']),symbol:z.string().max(8).optional(),prompt:z.string().max(2000).optional(),researchId:z.string().max(100).optional(),quantity:z.number().finite().optional(),side:z.enum(['buy','sell']).optional(),orderId:z.string().max(100).optional(),policy:policySchema.optional(),scenario:z.enum(['oversize','unauthorized','stale','tamper','unsupported']).optional(),marketMode:z.enum(['yahoo','replay']).optional()}).strict();
 
 function audit(state:DeskState,agent:string,tool:string,decision:AuditEvent['decision'],message:string,traceId=crypto.randomUUID(),orderId?:string,details?:Record<string,unknown>){
   const event:AuditEvent={id:crypto.randomUUID(),time:new Date().toISOString(),agent,tool,decision,message,traceId,orderId,details};
   state.audit.unshift(event);return event;
 }
 function demand(actor:string,tool:string){const check=toolPermission(actor,tool);if(!check.passed)throw new Error(check.reason);return check;}
-export async function snapshot(userId:string,config:IntegrationConfig):Promise<DeskSnapshot>{return {state:await readState(userId),market:marketSnapshot(),evidence:EVIDENCE,connections:connections(config)};}
+export async function snapshot(userId:string,config:IntegrationConfig,marketMode:MarketMode='yahoo'):Promise<DeskSnapshot>{
+  const [state, data] = await Promise.all([readState(userId), getMarketData(marketMode)]);
+  return {state,...data,evidence:EVIDENCE,connections:connections(config)};
+}
 
 export async function act(userId:string,config:IntegrationConfig,input:Action):Promise<{snapshot:DeskSnapshot;message:string}>{
   const body=actionSchema.parse(input);
+  const marketMode=body.marketMode??'yahoo';
   let state=await readState(userId);const expected=state.version;
   let message='Updated.';let event:AuditEvent|undefined;
   const traceId=crypto.randomUUID();
@@ -35,15 +40,16 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
   if(body.action==='propose'){
     demand('portfolio-agent','orders.propose');
     const research=state.research.find(r=>r.id===body.researchId);if(!research)throw new Error('Select a research note before proposing an order.');
-    const quote=marketSnapshot().find(q=>q.symbol===research.symbol);if(!quote)throw new Error('Unknown security.');
+    const {market}=await getMarketData(marketMode);
+    const quote=market.find(q=>q.symbol===research.symbol);if(!quote)throw new Error('A market price is unavailable for this security. Retry after the data source recovers.');
     const quantity=body.quantity??research.recommendation.quantity;
-    const order:Order={id:crypto.randomUUID(),researchId:research.id,symbol:research.symbol,side:body.side??research.recommendation.side,quantity,price:quote.price,notional:Math.round(quantity*quote.price*100)/100,status:'review',checks:[],evidenceIds:[...research.evidenceIds],createdAt:new Date().toISOString(),traceId,fingerprint:''};
-    order.checks=[toolPermission('portfolio-agent','orders.propose'),...evaluateOrder(order,state,marketSnapshot(),EVIDENCE)];
-    const external=await prismCheck(config,{action:'propose_order',mode:'paper',symbol:order.symbol,side:order.side,quantity:order.quantity,notional:order.notional,permission:'pending'},traceId);
+    const order:Order={id:crypto.randomUUID(),researchId:research.id,symbol:research.symbol,side:body.side??research.recommendation.side,quantity,price:quote.price,notional:Math.round(quantity*quote.price*100)/100,status:'review',checks:[],evidenceIds:[...research.evidenceIds],createdAt:new Date().toISOString(),traceId,fingerprint:'',marketMode,quoteTimestamp:quote.timestamp};
+    order.checks=[toolPermission('portfolio-agent','orders.propose'),...evaluateOrder(order,state,market,EVIDENCE)];
+    const external=await prismCheck(config,{action:'propose_order',mode:'paper',symbol:order.symbol,side:order.side,quantity:order.quantity,notional:order.notional,permission:'pending',marketMode,quoteTimestamp:quote.timestamp},traceId);
     if(connections(config).prism.enforce)order.checks.push({key:'prism',label:'PRISM enforcement',passed:external.allowed,reason:external.status});
     order.status=order.checks.every(c=>c.passed)?(approvalRequired(order,state)?'review':'approved'):'blocked';
     order.fingerprint=await fingerprintOrder(order,state);state.orders.unshift(order);
-    event=audit(state,'portfolio-agent','orders.propose',order.status==='blocked'?'blocked':order.status==='review'?'review':'allowed',order.status==='blocked'?order.checks.filter(c=>!c.passed).map(c=>c.reason).join('; '):'Order checked against the current mandate. No paper fill has occurred.',traceId,order.id,{orderFingerprint:order.fingerprint,portfolioVersion:state.portfolioVersion,policyVersion:state.policy.version,executionAttempted:false});
+    event=audit(state,'portfolio-agent','orders.propose',order.status==='blocked'?'blocked':order.status==='review'?'review':'allowed',order.status==='blocked'?order.checks.filter(c=>!c.passed).map(c=>c.reason).join('; '):'Order checked against the current mandate. No paper fill has occurred.',traceId,order.id,{orderFingerprint:order.fingerprint,portfolioVersion:state.portfolioVersion,policyVersion:state.policy.version,executionAttempted:false,marketMode,quoteTimestamp:quote.timestamp});
     message=order.status==='blocked'?'Order blocked. Inspect the failed permission checks.':order.status==='review'?'Order is ready for human review.':'Order is within automatic-approval limits. You can execute it in the paper ledger.';
   }
 
@@ -57,14 +63,15 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
     }else if(body.action==='approve'){
       demand('human-reviewer','orders.approve');
       if(order.status==='blocked')throw new Error('Blocked orders cannot be approved. Fix the cause and create a new proposal.');
-      order.checks=evaluateOrder(order,state,marketSnapshot(),EVIDENCE);
+      const {market}=await getMarketData(order.marketMode??'replay');
+      order.checks=evaluateOrder(order,state,market,EVIDENCE);
       if(!order.checks.every(c=>c.passed)){order.status='blocked';message='Approval stopped because the mandate checks no longer pass.';event=audit(state,'human-reviewer','orders.approve','blocked',message,traceId,order.id);}
       else{order.fingerprint=await fingerprintOrder(order,state);order.approval={fingerprint:order.fingerprint,portfolioVersion:state.portfolioVersion,policyVersion:state.policy.version,approvedAt:new Date().toISOString()};order.status='approved';event=audit(state,'human-reviewer','orders.approve','allowed','Approval bound to this exact order, portfolio revision and mandate version.',traceId,order.id,{fingerprint:order.fingerprint});message='Exact order approved. Permission and price are checked again at paper execution.';}
     }else{
       const capability=demand('execution-agent','orders.execute');
       const ledgerBefore=state.portfolioVersion;
-      const external=await prismCheck(config,{action:'execute_paper_order',symbol:order.symbol,side:order.side,quantity:order.quantity,permission:order.approval?'approved':'pending',mode:'paper'},traceId);
-      const market=marketSnapshot();order.checks=[capability,...evaluateOrder(order,state,market,EVIDENCE)];
+      const external=await prismCheck(config,{action:'execute_paper_order',symbol:order.symbol,side:order.side,quantity:order.quantity,permission:order.approval?'approved':'pending',mode:'paper',marketMode:order.marketMode??'replay'},traceId);
+      const {market}=await getMarketData(order.marketMode??'replay');order.checks=[capability,...evaluateOrder(order,state,market,EVIDENCE)];
       const fingerprint=await fingerprintOrder(order,state);
       const executionPrice=market.find(q=>q.symbol===order.symbol)?.price??Infinity;
       const bound=order.status==='approved'&&fingerprint===order.fingerprint&&(!approvalRequired(order,state,executionPrice)||(order.approval?.fingerprint===fingerprint&&order.approval.portfolioVersion===state.portfolioVersion&&order.approval.policyVersion===state.policy.version&&Date.now()-Date.parse(order.approval.approvedAt)<=300000));
@@ -72,7 +79,7 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
       if(connections(config).prism.enforce)order.checks.push({key:'prism',label:'PRISM enforcement',passed:external.allowed,reason:external.status});
       if(order.checks.every(c=>c.passed)){
         applyFill(state,order,market.find(q=>q.symbol===order.symbol)!);
-        event=audit(state,'execution-agent','orders.execute','allowed',`${order.side.toUpperCase()} ${order.quantity} ${order.symbol} filled in the paper ledger at $${order.fill!.price.toFixed(2)}`,traceId,order.id,{fingerprint,ledgerBefore,ledgerAfter:state.portfolioVersion,mode:'paper'});message='Paper order filled. Portfolio and audit history updated atomically.';
+        event=audit(state,'execution-agent','orders.execute','allowed',`${order.side.toUpperCase()} ${order.quantity} ${order.symbol} filled in the paper ledger at $${order.fill!.price.toFixed(2)}`,traceId,order.id,{fingerprint,ledgerBefore,ledgerAfter:state.portfolioVersion,mode:'paper',marketMode:order.marketMode??'replay',quoteTimestamp:market.find(q=>q.symbol===order.symbol)?.timestamp});message='Paper order filled. Portfolio and audit history updated atomically.';
       }else{order.status='blocked';delete order.approval;event=audit(state,'execution-agent','orders.execute','blocked',order.checks.filter(c=>!c.passed).map(c=>c.reason).join('; '),traceId,order.id,{ledgerBefore,ledgerAfter:state.portfolioVersion,executionAttempted:false,blockHonored:ledgerBefore===state.portfolioVersion});message='Execution blocked. The paper ledger is unchanged.';}
     }
   }
@@ -91,7 +98,7 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
     state.research.unshift(research);const market=marketSnapshot();
     if(scenario==='stale')market.forEach(q=>q.timestamp=new Date(Date.now()-3600000).toISOString());
     const quote=market.find(q=>q.symbol==='NVDA')!;
-    const order:Order={id:crypto.randomUUID(),researchId:research.id,symbol:'NVDA',side:'buy',quantity:scenario==='oversize'?Math.ceil(state.policy.maxOrderValue/quote.price)+10:5,price:quote.price,notional:0,status:'review',checks:[],evidenceIds:[...research.evidenceIds],createdAt:new Date().toISOString(),traceId,fingerprint:'',scenario};
+    const order:Order={id:crypto.randomUUID(),researchId:research.id,symbol:'NVDA',side:'buy',quantity:scenario==='oversize'?Math.ceil(state.policy.maxOrderValue/quote.price)+10:5,price:quote.price,notional:0,status:'review',checks:[],evidenceIds:[...research.evidenceIds],createdAt:new Date().toISOString(),traceId,fingerprint:'',scenario,marketMode:'replay',quoteTimestamp:quote.timestamp};
     order.notional=Math.round(order.quantity*quote.price*100)/100;order.fingerprint=await fingerprintOrder(order,state);
     if(scenario==='tamper'){const approved=order.fingerprint;order.quantity+=1;order.notional=order.quantity*order.price;order.checks.push({key:'approval',label:'Exact-order authorization',passed:approved===await fingerprintOrder(order,state),reason:'Requested quantity changed after approval. The prior authorization is invalid.'});}
     order.checks.push(toolPermission(scenario==='unauthorized'?'research-agent':'execution-agent','orders.execute'),...evaluateOrder(order,state,market,EVIDENCE));
@@ -120,5 +127,5 @@ export async function act(userId:string,config:IntegrationConfig,input:Action):P
     const fresh=await readState(userId);fresh.integration.prismLastStatus=status;fresh.integration.prismLastTraceId=event.traceId;
     try{await saveState(userId,fresh,fresh.version);}catch{/* Concurrent activity wins; ledger mutation above remains committed. */}
   }
-  return {snapshot:await snapshot(userId,config),message};
+  return {snapshot:await snapshot(userId,config,marketMode),message};
 }
