@@ -1,106 +1,221 @@
-const sidebarWidths = [74, 58, 82, 66, 71, 54];
-const articleWidths = [100, 97, 94, 98, 86];
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  Activity, ArrowDownLeft, ArrowRight, ArrowUpRight, BookOpen, Check,
+  CheckCheck, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3,
+  Database, Download, ExternalLink, FileText, FlaskConical, Layers3,
+  LayoutDashboard, Loader2, LockKeyhole, Menu, Plug, RefreshCw, Search,
+  ShieldCheck, SlidersHorizontal, Sparkles, X, XCircle,
+} from 'lucide-react';
+import type { Action, AuditEvent, DeskSnapshot, Evidence, Order, Policy, Quote, Research } from '../lib/types';
+
+type View = 'Overview' | 'Research' | 'Orders' | 'Mandate' | 'Audit trail' | 'Connections';
+const subscribeMobile = (callback: () => void) => { const query = window.matchMedia('(max-width: 600px)'); query.addEventListener('change', callback); return () => query.removeEventListener('change', callback); };
+const getMobileSnapshot = () => window.matchMedia('(max-width: 600px)').matches;
+const getServerMobileSnapshot = () => false;
+const NAV = [
+  { name: 'Overview', icon: LayoutDashboard }, { name: 'Research', icon: BookOpen },
+  { name: 'Orders', icon: Layers3 }, { name: 'Mandate', icon: ShieldCheck },
+  { name: 'Audit trail', icon: Activity }, { name: 'Connections', icon: Plug },
+] as const;
+const money = (value: number, decimals = 2) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(value);
+const number = (value: number, decimals = 0) => new Intl.NumberFormat('en-US', { maximumFractionDigits: decimals }).format(value);
+const percent = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+const date = (value: string) => { const parsed = new Date(value); return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
+const time = (value: string) => { const parsed = new Date(value); return Number.isNaN(parsed.valueOf()) ? '—' : parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+const newest = <T extends { createdAt: string }>(items: T[]) => [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+const titles: Record<View, string> = { Overview: 'Your investment desk.', Research: 'From evidence to conviction.', Orders: 'Every order, accounted for.', Mandate: 'Your rules. Enforced.', 'Audit trail': 'A record of every decision.', Connections: 'Connected, on your terms.' };
+const descriptions: Record<View, string> = { Overview: 'Research, portfolio decisions, and permissions in one place.', Research: 'Review the source before you review the trade.', Orders: 'Inspect the evidence and permission checks before capital moves.', Mandate: 'Set the boundaries your agents must operate within.', 'Audit trail': 'Follow an action from the first source to the final decision.', Connections: 'Model inference, evidence retrieval, and observability.' };
+
+function Badge({ status, children }: { status: string; children?: React.ReactNode }) {
+  return <span className={`badge badge-${status}`}><span className="status-dot" />{children || status}</span>;
+}
+function Ticker({ symbol, small = false }: { symbol: string; small?: boolean }) {
+  return <span className={`ticker-avatar ticker-${symbol.toLowerCase()}${small ? ' small' : ''}`} aria-hidden="true">{symbol === 'NVDA' ? 'N' : symbol === 'MSFT' ? <span className="msft-mark"><i /><i /><i /><i /></span> : symbol.slice(0, 1)}</span>;
+}
+function Empty({ title, description, children }: { title: string; description: string; children?: React.ReactNode }) {
+  return <div className="empty-state"><FileText size={25} strokeWidth={1.4} /><h3>{title}</h3><p>{description}</p>{children}</div>;
+}
+function Sparkline({ values, positive }: { values: number[]; positive: boolean }) {
+  if (values.length < 2) return <span className="muted">—</span>;
+  const min = Math.min(...values), range = Math.max(...values) - min || 1;
+  const points = values.map((v, i) => `${i * 76 / (values.length - 1)},${27 - (v - min) / range * 22}`).join(' ');
+  return <svg className="sparkline" viewBox="0 0 78 30" aria-hidden="true"><polyline points={points} fill="none" stroke={positive ? 'var(--positive)' : 'var(--negative)'} strokeWidth="1.5" /></svg>;
+}
+
+function PriceChart({ quote }: { quote: Quote }) {
+  const [windowSize, setWindowSize] = useState(0);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const values = windowSize ? quote.history.slice(-windowSize) : quote.history;
+  const safeValues = values.length ? values : [quote.previousClose, quote.price];
+  const lo = Math.min(...safeValues), hi = Math.max(...safeValues);
+  const pad = Math.max((hi - lo) * 0.2, 0.1), low = lo - pad, high = hi + pad;
+  const w = 800, h = 236, left = 6, right = 73, top = 18, bottom = 20;
+  const x = (i: number) => left + i / Math.max(safeValues.length - 1, 1) * (w - left - right);
+  const y = (v: number) => top + (high - v) / (high - low) * (h - top - bottom);
+  const path = safeValues.map((v, i) => `${i ? 'L' : 'M'} ${x(i)} ${y(v)}`).join(' ');
+  const area = `${path} L ${x(safeValues.length - 1)} ${h - bottom} L ${left} ${h - bottom} Z`;
+  const idx = hovered === null ? safeValues.length - 1 : Math.min(hovered, safeValues.length - 1);
+  const selectedValue = safeValues[idx];
+  return <div className="price-chart">
+    <div className="chart-tools"><span className="chart-caption"><span className="chart-key" />Synthetic price history</span><div className="segmented" aria-label="Chart window">{[{ n: 0, label: 'Full session' }, { n: 30, label: '30 points' }, { n: 15, label: '15 points' }].map(t => <button type="button" key={t.n} className={windowSize === t.n ? 'selected' : ''} aria-pressed={windowSize === t.n} onClick={() => { setWindowSize(t.n); setHovered(null); }}>{t.label}</button>)}</div></div>
+    <div className="chart-canvas" onMouseLeave={() => setHovered(null)}>
+      <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`${quote.symbol} synthetic price chart, ${safeValues.length} observations, from ${money(safeValues[0])} to ${money(safeValues[safeValues.length - 1])}`} onMouseMove={event => { const bounds = event.currentTarget.getBoundingClientRect(); const pos = ((event.clientX - bounds.left) / bounds.width * w - left) / (w - left - right); setHovered(Math.max(0, Math.min(safeValues.length - 1, Math.round(pos * (safeValues.length - 1))))); }}>
+        <defs><linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#377859" stopOpacity=".11" /><stop offset="100%" stopColor="#377859" stopOpacity="0" /></linearGradient></defs>
+        {[0, 1, 2, 3].map(n => { const val = high - (high - low) * (n + .2) / 3.4; return <g key={n}><line x1={left} x2={w - right + 7} y1={y(val)} y2={y(val)} stroke="#e6e9e2" strokeDasharray="3 5" /><text x={w - right + 18} y={y(val) + 4} className="chart-axis">{val.toFixed(2)}</text></g>; })}
+        <path d={area} fill="url(#chart-fill)" /><path d={path} fill="none" stroke="#347553" strokeWidth="2.3" strokeLinejoin="round" strokeLinecap="round" />
+        {hovered !== null && <line x1={x(idx)} x2={x(idx)} y1={top} y2={h - bottom} stroke="#8e9d91" strokeDasharray="3 4" />}
+        <circle cx={x(idx)} cy={y(selectedValue)} r="4.5" fill="#347553" stroke="white" strokeWidth="2" />
+        <g transform={`translate(${Math.min(x(idx), w - right - 70)}, ${Math.max(0, y(selectedValue) - 31)})`}><rect width="66" height="23" x="-28" rx="4" fill="#244c38" /><text x="5" y="16" textAnchor="middle" fill="white" className="chart-value">{selectedValue.toFixed(2)}</text></g>
+      </svg>
+    </div>
+    <div className="chart-bottom"><span>Session start</span><span>{safeValues.length} simulated observations · USD</span><span>Latest</span></div>
+  </div>;
+}
+
+function EvidenceDrawer({ evidence, close }: { evidence: Evidence; close: () => void }) {
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement;
+    panel.current?.focus();
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+      if (e.key === 'Tab') {
+        const elements = panel.current?.querySelectorAll<HTMLElement>('a[href], button, [tabindex="0"]');
+        if (!elements?.length) return;
+        const first = elements[0], last = elements[elements.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', handle);
+    return () => { document.removeEventListener('keydown', handle); previous?.focus(); };
+  }, [close]);
+  return <div className="drawer-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}><div ref={panel} className="evidence-drawer" role="dialog" aria-modal="true" aria-labelledby="evidence-title" tabIndex={-1}>
+    <div className="drawer-top"><span><FileText size={17} /> Source evidence</span><button type="button" className="icon-button" onClick={close} aria-label="Close evidence"><X size={19} /></button></div>
+    <div className="drawer-content"><Badge status="source">Historical issuer disclosure</Badge><h2 id="evidence-title">{evidence.title}</h2><dl className="source-meta"><div><dt>Company</dt><dd>{evidence.symbol}</dd></div><div><dt>Published</dt><dd>{date(evidence.publishedAt)}</dd></div><div><dt>Reporting period</dt><dd>{evidence.period}</dd></div></dl><h3>Source excerpt</h3><blockquote>{evidence.text}</blockquote>{Object.keys(evidence.metrics).length > 0 && <><h3>Recorded metrics</h3><dl className="metric-list">{Object.entries(evidence.metrics).map(([key, val]) => <div key={key}><dt>{key.replace(/_/g, ' ')}</dt><dd>{number(val, 4)}</dd></div>)}</dl></>}<p className="helper">Historical evidence is dated separately from the synthetic market. Follow the source to inspect its full context and units.</p><a className="button primary full-width" href={evidence.url} target="_blank" rel="noreferrer">Open original disclosure <ExternalLink size={15} /></a><div className="source-id mono">{evidence.id}</div></div>
+  </div></div>;
+}
+
+function SourceButtons({ ids, evidence, open }: { ids: string[]; evidence: Evidence[]; open: (evidence: Evidence) => void }) {
+  return <span className="source-buttons">{ids.map(id => { const source = evidence.find(item => item.id === id); if (!source) return <span className="source-missing" key={id}>Missing source</span>; return <button className="citation" type="button" key={id} onClick={() => open(source)} title={`Read ${source.title}`}>[{evidence.indexOf(source) + 1}]<span className="sr-only"> {source.title}</span></button>; })}</span>;
+}
+
+function ResearchMemo({ research, snapshot, busy, run, openEvidence }: { research: Research; snapshot: DeskSnapshot; busy: string; run: (action: Action, message?: string) => Promise<void>; openEvidence: (e: Evidence) => void }) {
+  const [quantity, setQuantity] = useState(research.recommendation.quantity);
+  const [side, setSide] = useState<'buy' | 'sell'>(research.recommendation.side);
+  const quote = snapshot.market.find(item => item.symbol === research.symbol);
+  return <article className="memo panel"><div className="panel-heading"><div className="inline"><Ticker symbol={research.symbol} small /><strong>{research.symbol} research memo</strong></div><Badge status={research.mode === 'sample' ? 'sample' : 'allowed'}>{research.mode === 'sample' ? 'Sample research' : 'Nicrron inference'}</Badge></div><div className="memo-content"><div className="memo-dateline">{date(research.createdAt)} · {time(research.createdAt)}<span>{research.model}</span></div><h2>{research.title}</h2><p className="memo-summary">{research.summary}</p><h3>What the evidence says</h3><ol className="claims">{research.claims.map((claim, i) => <li key={i}><span className={`claim-indicator ${claim.supported ? 'positive' : 'negative'}`}>{claim.supported ? <Check size={13} /> : <X size={13} />}</span><div>{claim.text}<SourceButtons ids={claim.evidenceIds} evidence={snapshot.evidence} open={openEvidence} />{!claim.supported && <span className="claim-warning">Supporting evidence has not been verified</span>}</div></li>)}</ol><h3>Consider before acting</h3><ul className="risk-list">{research.risks.map((risk, i) => <li key={i}>{risk}</li>)}</ul><div className="memo-sources"><span>Underlying sources</span>{research.evidenceIds.map(id => { const evidence = snapshot.evidence.find(item => item.id === id); return evidence && <button type="button" key={id} onClick={() => openEvidence(evidence)}><FileText size={14} /><span>{evidence.title}<small>{date(evidence.publishedAt)}</small></span><ArrowUpRight size={14} /></button>; })}</div></div><form className="proposal-form" onSubmit={e => { e.preventDefault(); void run({ action: 'propose', researchId: research.id, quantity, side }, 'Checking your proposed order…'); }}><div><h3>Turn research into a proposal</h3><p>{research.recommendation.rationale}</p></div><div className="proposal-inputs"><label>Side<select value={side} onChange={e => setSide(e.target.value as 'buy' | 'sell')}><option value="buy">Buy</option><option value="sell">Sell</option></select></label><label>Shares<input required type="number" min="1" step="1" value={quantity} onChange={e => setQuantity(Number(e.target.value))} /></label><div className="proposal-estimate"><span>Estimated notional</span><strong className="mono">{quote ? money(quantity * quote.price) : 'No quote'}</strong></div><button type="submit" className="button primary" disabled={!!busy || !quote || quantity < 1}>{busy === 'propose' ? <Loader2 className="spin" size={16} /> : <ArrowRight size={16} />}Propose order</button></div><p className="small muted">Uses synthetic prices. Proposals must pass the mandate before paper execution.</p></form></article>;
+}
+
+function OrderDetails({ order, snapshot, busy, run, openEvidence }: { order: Order; snapshot: DeskSnapshot; busy: string; run: (action: Action, message?: string) => Promise<void>; openEvidence: (e: Evidence) => void }) {
+  const research = snapshot.state.research.find(item => item.id === order.researchId);
+  return <article className="order-details panel"><div className="panel-heading"><span className="inline"><ShieldCheck size={17} /><strong>Order review</strong></span><Badge status={order.status} /></div><div className="order-summary"><div className="inline"><Ticker symbol={order.symbol} /><div><h2>{order.side === 'buy' ? 'Buy' : 'Sell'} {number(order.quantity)} {order.symbol}</h2><p className="muted">{date(order.createdAt)} · {time(order.createdAt)}</p></div></div><div className="order-value"><strong className="mono">{money(order.notional)}</strong><small>at {money(order.price)} / share · synthetic</small></div></div><div className="order-body"><div className="section-line"><h3>Permission checks</h3><span className="mono muted">{order.checks.filter(c => c.passed).length}/{order.checks.length} passed</span></div><ul className="check-list">{order.checks.map(check => <li key={check.key}>{check.passed ? <CheckCircle2 size={17} className="positive" /> : <XCircle size={17} className="negative" />}<div><strong>{check.label}</strong><p>{check.reason}</p></div><span className={check.passed ? 'positive' : 'negative'}>{check.passed ? 'Pass' : 'Blocked'}</span></li>)}</ul>{research && <div className="order-rationale"><h3>Research behind the order</h3><p>{research.summary}</p><SourceButtons ids={order.evidenceIds} evidence={snapshot.evidence} open={openEvidence} /></div>}<div className="order-binding"><LockKeyhole size={15} /><span>Bound to this order, portfolio state, and mandate version.<code>{order.fingerprint.slice(0, 28)}{order.fingerprint.length > 28 ? '…' : ''}</code></span></div>{order.approval && <div className="approval-receipt"><CheckCheck size={16} /><span>Approved {time(order.approval.approvedAt)} · mandate v{order.approval.policyVersion} · portfolio v{order.approval.portfolioVersion}</span></div>}{order.fill && <div className="approval-receipt"><CheckCircle2 size={16} /><span>Paper fill: {number(order.fill.quantity)} shares at {money(order.fill.price)} · {time(order.fill.time)}</span></div>}</div><div className="order-footer"><span className="small muted">{order.status === 'blocked' ? 'Resolve failed checks with a new proposal.' : order.status === 'executed' ? 'Recorded in the paper portfolio and audit trail.' : 'No real funds or brokerage connection.'}</span><div className="inline">{(order.status === 'review' || order.status === 'approved' || order.status === 'blocked') && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void run({ action: 'reject', orderId: order.id })}>Reject</button>}{order.status === 'review' && <button type="button" className="button primary" disabled={!!busy} onClick={() => void run({ action: 'approve', orderId: order.id })}><Check size={16} />Approve order</button>}{order.status === 'approved' && <button type="button" className="button primary" disabled={!!busy} onClick={() => void run({ action: 'execute', orderId: order.id })}><ArrowRight size={16} />Execute paper order</button>}</div></div></article>;
+}
+
+function MandateEditor({ policy, busy, run }: { policy: Policy; busy: string; run: (action: Action) => Promise<void> }) {
+  const { version: policyVersion, ...editablePolicy } = policy;
+  const [draft, setDraft] = useState<Omit<Policy, 'version'>>({ ...editablePolicy });
+  const set = (key: keyof Policy, value: number | boolean | string[]) => setDraft(prev => ({ ...prev, [key]: value }));
+  const fields: { key: 'maxOrderValue' | 'maxPositionWeight' | 'approvalAbove' | 'maxQuoteAgeSeconds' | 'maxEvidenceAgeDays'; label: string; hint: string; suffix: string; min: number; max?: number; step: number }[] = [
+    { key: 'maxOrderValue', label: 'Maximum order value', hint: 'Block individual orders above this notional.', suffix: 'USD', min: 100, max: 100000, step: 100 },
+    { key: 'maxPositionWeight', label: 'Maximum position weight', hint: 'Limit a single holding as a share of portfolio NAV.', suffix: '%', min: 1, max: 100, step: 1 },
+    { key: 'approvalAbove', label: 'Approval threshold', hint: 'Require human approval above this order value.', suffix: 'USD', min: 0, max: 100000, step: 100 },
+    { key: 'maxQuoteAgeSeconds', label: 'Quote freshness', hint: 'Reject a quote older than this limit.', suffix: 'seconds', min: 1, max: 300, step: 1 },
+    { key: 'maxEvidenceAgeDays', label: 'Evidence freshness', hint: 'Maximum source age relative to the replay date.', suffix: 'days', min: 1, max: 365, step: 1 },
+  ];
+  const weightIsFraction = policy.maxPositionWeight <= 1;
+  return <div className="settings-grid"><form className="panel mandate-form" onSubmit={e => { e.preventDefault(); void run({ action: 'policy', policy: draft }); }}><div className="panel-heading"><span className="inline"><SlidersHorizontal size={17} /><strong>Investment constraints</strong></span><span className="version-label">VERSION {policyVersion}</span></div><div className="settings-body">{fields.map(field => <div className="setting-row" key={field.key}><label htmlFor={field.key}><strong>{field.label}</strong><span>{field.hint}</span></label><div className="unit-input"><input id={field.key} type="number" required min={field.min} max={field.max} step={field.step} value={field.key === 'maxPositionWeight' && weightIsFraction ? Math.round(draft[field.key] * 100) : draft[field.key]} onChange={e => set(field.key, Number(e.target.value) / (field.key === 'maxPositionWeight' && weightIsFraction ? 100 : 1))} /><span>{field.suffix}</span></div></div>)}<div className="setting-row"><div><strong>Always require human approval</strong><p>Every order needs a reviewer, regardless of size.</p></div><button type="button" className={`switch ${draft.requireApproval ? 'on' : ''}`} role="switch" aria-label="Always require human approval" aria-checked={draft.requireApproval} onClick={() => set('requireApproval', !draft.requireApproval)}><span /></button></div><fieldset className="symbol-allowlist"><legend>Approved securities</legend><p className="muted">Orders outside this list are blocked.</p><div>{['NVDA', 'MSFT', 'AAPL', 'GOOGL', 'AMZN', 'META'].map(symbol => <label key={symbol}><input type="checkbox" checked={draft.allowedSymbols.includes(symbol)} onChange={e => set('allowedSymbols', e.target.checked ? [...draft.allowedSymbols, symbol] : draft.allowedSymbols.filter(s => s !== symbol))} /><span>{symbol}</span></label>)}</div></fieldset></div><div className="settings-footer"><p>Saving creates a new mandate version. Existing approvals may need to be renewed.</p><button type="submit" className="button primary" disabled={!!busy}>{busy === 'policy' ? <Loader2 className="spin" size={15} /> : <Check size={15} />}Save mandate</button></div></form><aside className="roles-panel"><h2>Separation of duties</h2><p className="muted">Each role has a defined boundary in the paper workflow.</p>{[{ icon: BookOpen, title: 'Research agent', detail: 'Read disclosures and produce a cited memo.', access: 'READ + RESEARCH' }, { icon: Layers3, title: 'Proposal agent', detail: 'Suggest an order. Cannot approve its own work.', access: 'PROPOSE ONLY' }, { icon: ShieldCheck, title: 'Human reviewer', detail: 'Approve or reject the exact proposed order.', access: 'REVIEW + AUTHORIZE' }, { icon: LockKeyhole, title: 'Execution gateway', detail: 'Recheck permissions before changing the paper ledger.', access: 'ENFORCE + RECORD' }].map(role => <div className="role" key={role.title}><role.icon size={19} /><div><strong>{role.title}</strong><p>{role.detail}</p><span>{role.access}</span></div></div>)}<div className="quiet-note"><ShieldCheck size={17} /><p>An agent cannot change these rules or grant itself execution permission.</p></div></aside></div>;
+}
 
 export default function Home() {
-  return (
-    <main className="fixed inset-0 overflow-hidden bg-[#fbfaf8] text-zinc-900">
-      <header
-        aria-hidden="true"
-        className="grid h-[76px] grid-cols-[1fr_auto_1fr] items-center border-b border-stone-200 bg-white/95 px-6 sm:px-14"
-      >
-        <div className="flex items-center gap-3">
-          <span className="h-9 w-9 rounded-full bg-stone-100" />
-          <span className="h-3.5 w-28 rounded-full bg-stone-100" />
-        </div>
-        <span className="hidden h-9 w-[min(30vw,420px)] rounded-xl bg-stone-100 sm:block" />
-        <div className="flex items-center justify-end gap-3">
-          <span className="hidden h-9 w-9 rounded-full bg-stone-100 sm:block" />
-          <span className="h-9 w-24 rounded-xl bg-stone-100" />
-        </div>
-      </header>
+  const isMobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, getServerMobileSnapshot);
+  const [snapshot, setSnapshot] = useState<DeskSnapshot | null>(null);
+  const [view, setView] = useState<View>('Overview');
+  const [symbol, setSymbol] = useState('NVDA');
+  const [busy, setBusy] = useState('');
+  const busyRef = useRef(false);
+  const mutationVersion = useRef(0);
+  const [loadError, setLoadError] = useState('');
+  const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
+  const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [researchId, setResearchId] = useState('');
+  const [orderId, setOrderId] = useState('');
+  const [prompt, setPrompt] = useState('What changed in the latest earnings disclosure, and what should I consider before increasing our position?');
+  const [auditQuery, setAuditQuery] = useState('');
+  const [auditFilter, setAuditFilter] = useState('all');
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [expandedEvent, setExpandedEvent] = useState('');
+  const [tableMode, setTableMode] = useState<'watchlist' | 'positions'>('watchlist');
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const refresh = useCallback(async () => {
+    if (busyRef.current) return;
+    const version = mutationVersion.current;
+    try { const response = await fetch('/api/desk', { cache: 'no-store' }); const result = await response.json() as DeskSnapshot & { error?: string }; if (!response.ok) throw new Error(result.error || 'Unable to load the investment desk.'); if (version === mutationVersion.current && !busyRef.current) { setSnapshot(result); setLoadError(''); } } catch (err) { setLoadError(err instanceof Error ? err.message : 'Unable to connect. Please try again.'); }
+  }, []);
+  useEffect(() => { const initial = setTimeout(() => void refresh(), 0); const interval = setInterval(() => void refresh(), 5000); return () => { clearTimeout(initial); clearInterval(interval); }; }, [refresh]);
+  useEffect(() => { if (toast) { const timeout = setTimeout(() => setToast(null), 6500); return () => clearTimeout(timeout); } }, [toast]);
+  const run = useCallback(async (action: Action, pending?: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true; mutationVersion.current += 1; setBusy(action.action);
+    if (pending) setToast({ message: pending, error: false });
+    try {
+      const response = await fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action) });
+      const result = await response.json() as { snapshot?: DeskSnapshot; message?: string; error?: string };
+      if (result.snapshot) setSnapshot(result.snapshot);
+      if (!response.ok || result.error) throw new Error(result.error || 'The action could not be completed.');
+      setToast({ message: result.message || 'Your desk is up to date.', error: false });
+      const next = result.snapshot as DeskSnapshot | undefined;
+      if (action.action === 'research' && next) { setResearchId(newest(next.state.research)[0]?.id || ''); setView('Research'); }
+      if ((action.action === 'propose' || action.action === 'scenario') && next) { setOrderId(newest(next.state.orders)[0]?.id || ''); setOrderFilter('all'); setView('Orders'); setDemoOpen(false); }
+      if (action.action === 'reset') { setOrderId(''); setResearchId(''); setResetConfirm(false); setView('Overview'); }
+    } catch (err) { setToast({ message: err instanceof Error ? err.message : 'Something went wrong. Please try again.', error: true }); }
+    finally { busyRef.current = false; setBusy(''); }
+  }, []);
+  const closeEvidence = useCallback(() => setEvidence(null), []);
+  const navigate = (next: View) => { setView(next); setMobileNav(false); };
+  const exportAudit = () => { if (!snapshot) return; const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), environment: 'paper', replayDate: snapshot.connections.replayDate, policy: snapshot.state.policy, audit: snapshot.state.audit, orders: snapshot.state.orders }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `mandate-audit-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); setToast({ message: 'Audit record exported as JSON.', error: false }); };
+  const orders = useMemo(() => snapshot ? newest(snapshot.state.orders) : [], [snapshot]);
+  const research = useMemo(() => snapshot ? newest(snapshot.state.research) : [], [snapshot]);
+  const selectedResearch = research.find(item => item.id === researchId) || research.find(item => item.symbol === symbol);
+  const selectedOrder = orders.find(item => item.id === orderId && (orderFilter === 'all' || item.status === orderFilter)) || orders.find(item => orderFilter === 'all' || item.status === orderFilter);
+  const quote = snapshot?.market.find(item => item.symbol === symbol) || snapshot?.market[0];
+  const positionValue = snapshot?.state.positions.reduce((sum, position) => sum + position.shares * (snapshot.market.find(q => q.symbol === position.symbol)?.price || 0), 0) || 0;
+  const nav = (snapshot?.state.cash || 0) + positionValue;
+  const dayChange = snapshot?.state.positions.reduce((sum, p) => { const q = snapshot.market.find(q => q.symbol === p.symbol); return sum + p.shares * (q ? q.price - q.previousClose : 0); }, 0) || 0;
+  const latestBlocked = orders.find(o => o.status === 'blocked');
+  const pendingOrders = orders.filter(o => o.status === 'review' || o.status === 'approved');
+  const audits = snapshot ? [...snapshot.state.audit].sort((a, b) => b.time.localeCompare(a.time)).filter(event => (auditFilter === 'all' || event.decision === auditFilter) && `${event.agent} ${event.tool} ${event.message} ${event.traceId}`.toLowerCase().includes(auditQuery.toLowerCase())) : [];
+  const filteredOrders = orders.filter(o => orderFilter === 'all' || o.status === orderFilter);
+  return <div className="app-shell">
+    <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`} inert={isMobile && !mobileNav} aria-hidden={isMobile && !mobileNav ? true : undefined}><a className="brand" href="#" onClick={e => { e.preventDefault(); navigate('Overview'); }} aria-label="Mandate overview"><span className="brand-symbol"><i /><i /><i /></span><span>mandate<span className="brand-period">.</span></span></a><div className="workspace-label"><span className="workspace-avatar">M</span><div>Investment desk<small>Research workspace</small></div><ChevronDown size={14} /></div><nav aria-label="Main navigation">{NAV.map(item => <button type="button" key={item.name} className={`nav-item ${view === item.name ? 'active' : ''}`} onClick={() => navigate(item.name)} aria-current={view === item.name ? 'page' : undefined}><item.icon size={18} strokeWidth={1.7} /><span>{item.name}</span>{item.name === 'Orders' && pendingOrders.length > 0 && <span className="nav-count">{pendingOrders.length}</span>}</button>)}</nav><div className="sidebar-bottom"><div className="paper-status"><span className="status-dot" /><span>Paper environment</span><LockKeyhole size={12} /></div><p>Synthetic market.<br />Real permission checks.</p><button className="sidebar-help" type="button" onClick={() => navigate('Connections')}><CircleHelp size={16} />Workspace setup<ArrowUpRight size={13} /></button><div className="profile"><span className="profile-avatar">PM</span><div>Portfolio manager<small>Reviewer access</small></div><ShieldCheck size={15} /></div></div></aside>
+    {mobileNav && <button className="nav-scrim" type="button" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
+    <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button type="button" className="icon-button mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation"><Menu size={19} /></button><span>Workspace</span><ChevronRight size={13} /><strong>{view}</strong></div><div className="topbar-right"><span className="replay-label"><span className="status-dot" />Synthetic replay{snapshot && <span className="replay-date"> · {date(snapshot.connections.replayDate)}</span>}</span><button type="button" className={`icon-button ${busy ? 'muted' : ''}`} onClick={() => void refresh()} disabled={!!busy} aria-label="Refresh desk"><RefreshCw size={15} className={busy ? 'spin' : ''} /></button><span className="top-avatar">PM</span></div></header>
+    <main id="main-content"><div className="page-heading"><div><h1>{titles[view]}</h1><p>{descriptions[view]}</p></div><div className="heading-actions"><button type="button" className={`button secondary ${demoOpen ? 'pressed' : ''}`} onClick={() => setDemoOpen(!demoOpen)} aria-expanded={demoOpen}><FlaskConical size={15} />Run failure demo<ChevronDown size={13} /></button>{view === 'Overview' && <button type="button" className="button primary" onClick={() => { setResearchId(''); navigate('Research'); }}><Sparkles size={15} />New research</button>}{view === 'Audit trail' && <button type="button" className="button primary" onClick={exportAudit} disabled={!snapshot}><Download size={15} />Export audit</button>}</div></div>
+    {loadError && <div className="connection-error" role="alert"><XCircle size={17} /><span>{loadError}{snapshot && ' Your last loaded desk is still visible.'}</span><button type="button" onClick={() => void refresh()}>Retry</button></div>}
+    {demoOpen && <section className="demo-panel"><div><h2>Put the permission boundary to work.</h2><p>Each scenario requests a paper action that should be stopped and recorded.</p></div><div className="scenario-buttons">{[{ id: 'oversize', name: 'Oversized order', detail: 'Exceeds the order limit' }, { id: 'unauthorized', name: 'Unauthorized agent', detail: 'Research role tries to execute' }, { id: 'stale', name: 'Stale quote', detail: 'Price fails freshness check' }, { id: 'tamper', name: 'Changed order', detail: 'Order differs from its approval' }, { id: 'unsupported', name: 'Unsupported claim', detail: 'Evidence cannot support the thesis' }].map(s => <button type="button" key={s.id} disabled={!!busy} onClick={() => void run({ action: 'scenario', scenario: s.id }, 'Running permission checks…')}><span>{s.name}<small>{s.detail}</small></span><ArrowRight size={15} /></button>)}</div></section>}
+    {!snapshot ? <div className="loading-desk"><span className="loading-mark"><Layers3 size={24} /></span><h2>{loadError ? 'The desk is temporarily unavailable.' : 'Opening your investment desk…'}</h2><p>{loadError ? 'Retry the connection to load your portfolio and research.' : 'Loading the portfolio, source evidence, and order ledger.'}</p>{!loadError && <Loader2 className="spin muted" size={19} />}</div> : <>
+    {view === 'Overview' && <>
+      <section className="portfolio-strip" aria-label="Portfolio summary"><div className="nav-metric"><span>Paper portfolio value <span className="currency-label">USD</span></span><strong>{money(nav)}</strong><span className={dayChange >= 0 ? 'positive' : 'negative'}>{dayChange >= 0 ? <ArrowUpRight size={15} /> : <ArrowDownLeft size={15} />}{money(Math.abs(dayChange))} ({percent(nav - dayChange ? dayChange / (nav - dayChange) * 100 : 0)})<span className="muted">vs. synthetic prior close</span></span></div><div className="strip-metric"><span>Available cash</span><strong>{money(snapshot.state.cash)}</strong><small>{nav ? (snapshot.state.cash / nav * 100).toFixed(1) : '0.0'}% of portfolio</small></div><div className="strip-metric"><span>Invested capital</span><strong>{money(positionValue)}</strong><small>{snapshot.state.positions.filter(p => p.shares > 0).length} open positions</small></div><button type="button" className="strip-metric metric-action" onClick={() => navigate('Orders')}><span>Awaiting review <ArrowUpRight size={13} /></span><strong>{pendingOrders.length.toString().padStart(2, '0')}</strong><small>View order queue</small></button></section>
+      <div className="overview-grid"><section className="market-panel panel"><div className="panel-heading"><div className="inline"><span className="section-tab active">Market overview</span></div><span className="small muted">Synthetic quotes</span></div>{quote && <><div className="market-title"><div className="inline"><Ticker symbol={quote.symbol} /><div><label className="sr-only" htmlFor="chart-symbol">Select chart symbol</label><div className="symbol-select"><select id="chart-symbol" value={symbol} onChange={e => setSymbol(e.target.value)}>{snapshot.market.map(q => <option key={q.symbol} value={q.symbol}>{q.symbol}</option>)}</select><ChevronDown size={13} /></div><span>{quote.name}</span></div></div><div className="quote-price"><strong>{money(quote.price)}</strong><span className={quote.price >= quote.previousClose ? 'positive' : 'negative'}>{percent((quote.price - quote.previousClose) / quote.previousClose * 100)}<small>synthetic session</small></span></div></div><PriceChart key={quote.symbol} quote={quote} /></>}<div className="market-source-note"><Clock3 size={12} /><span>Replay only · prices are simulated and are not current market data.</span></div></section>
+      <section className="decision-panel"><div className="decision-heading"><span className="inline"><ShieldCheck size={17} /><h2>Permission desk</h2></span><span className="version-label">MANDATE v{snapshot.state.policy.version}</span></div>{latestBlocked ? <><div className="blocked-label"><span className="status-dot" />Recent blocked action</div><h3>{latestBlocked.side === 'buy' ? 'Buy' : 'Sell'} {number(latestBlocked.quantity)} shares of {latestBlocked.symbol}</h3><div className="blocked-value mono">{money(latestBlocked.notional)}<span>proposed notional</span></div><p className="blocked-reason">{latestBlocked.checks.find(check => !check.passed)?.reason || 'This order did not satisfy the investment mandate.'}</p><div className="mini-checks">{[...latestBlocked.checks].sort((a, b) => Number(a.passed) - Number(b.passed)).slice(0, 3).map(check => <div key={check.key}>{check.passed ? <Check size={13} className="positive" /> : <X size={13} className="negative" />}<span>{check.label}</span><span className={check.passed ? 'positive' : 'negative'}>{check.passed ? 'Passed' : 'Blocked'}</span></div>)}</div><button type="button" className="button secondary full-width" onClick={() => { setOrderId(latestBlocked.id); setOrderFilter('all'); navigate('Orders'); }}>Inspect decision<ArrowRight size={15} /></button></> : <><div className="permission-ready"><ShieldCheck size={30} /><h3>Boundaries are in place.</h3><p>Your mandate checks every proposed paper order.</p></div><button className="button secondary full-width" type="button" onClick={() => setDemoOpen(true)}>Test a failure scenario<ArrowRight size={15} /></button></>}<div className="decision-footnote"><LockKeyhole size={13} />Execution requires permission.</div></section></div>
+      <section className="holdings-panel panel"><div className="panel-heading"><div className="table-tabs"><button type="button" className={tableMode === 'watchlist' ? 'active' : ''} onClick={() => setTableMode('watchlist')}>Watchlist <span>{snapshot.market.length}</span></button><button type="button" className={tableMode === 'positions' ? 'active' : ''} onClick={() => setTableMode('positions')}>Positions <span>{snapshot.state.positions.length}</span></button></div><span className="small muted">Select a security to inspect</span></div><div className="table-scroll"><table className="data-table market-table"><thead><tr><th>Security</th><th>Price</th><th>Session change</th>{tableMode === 'positions' ? <><th>Shares</th><th>Market value</th><th>Weight</th></> : <><th>Price history</th><th>Research evidence</th></>}<th><span className="sr-only">Research</span></th></tr></thead><tbody>{snapshot.market.filter(q => tableMode === 'watchlist' || snapshot.state.positions.some(p => p.symbol === q.symbol)).map(q => { const position = snapshot.state.positions.find(p => p.symbol === q.symbol); const change = (q.price - q.previousClose) / q.previousClose * 100; const hasSource = snapshot.evidence.some(e => e.symbol === q.symbol); return <tr key={q.symbol} className={symbol === q.symbol ? 'selected-row' : ''}><td><button type="button" className="security-cell" onClick={() => setSymbol(q.symbol)}><Ticker symbol={q.symbol} small /><span><strong>{q.symbol}</strong><small>{q.name}</small></span></button></td><td className="mono">{money(q.price)}</td><td className={`mono ${change >= 0 ? 'positive' : 'negative'}`}>{percent(change)}</td>{tableMode === 'positions' ? <><td className="mono">{number(position?.shares || 0)}</td><td className="mono">{money((position?.shares || 0) * q.price)}</td><td className="mono">{nav ? ((position?.shares || 0) * q.price / nav * 100).toFixed(1) : 0}%</td></> : <><td><Sparkline values={q.history} positive={change >= 0} /></td><td><span className={`evidence-indicator ${hasSource ? '' : 'unavailable'}`}><FileText size={12} />{hasSource ? 'Issuer disclosure' : 'No source loaded'}</span></td></>}<td><button type="button" className="text-button" onClick={() => { setSymbol(q.symbol); setResearchId(''); navigate('Research'); }}>Research<ArrowUpRight size={13} /></button></td></tr>; })}</tbody></table></div></section>
+      <div className="overview-bottom"><section className="latest-research"><div className="section-line"><h2>Latest research</h2><button type="button" className="text-button" onClick={() => navigate('Research')}>All research<ArrowRight size={14} /></button></div>{research.length ? research.slice(0, 2).map(memo => <button type="button" className="research-preview" key={memo.id} onClick={() => { setResearchId(memo.id); setSymbol(memo.symbol); navigate('Research'); }}><span className="document-icon"><FileText size={19} /></span><span><span className="preview-label">{memo.symbol} <span>· {memo.mode === 'sample' ? 'Sample research' : 'Nicrron research'}</span></span><strong>{memo.title}</strong><small>{memo.evidenceIds.length} sources · {date(memo.createdAt)}</small></span><ArrowUpRight size={17} /></button>) : <Empty title="Start with a source." description="Generate your first research memo from a company disclosure." />}</section><section className="recent-activity"><div className="section-line"><h2>Recent activity</h2><button type="button" className="text-button" onClick={() => navigate('Audit trail')}>View audit<ArrowRight size={14} /></button></div>{audits.slice(0, 3).map(event => <div className="activity-row" key={event.id}><span className={`activity-dot ${event.decision}`} /><div><strong>{event.tool.replace(/[_.]/g, ' ')}</strong><p>{event.message}</p></div><time>{time(event.time)}</time></div>)}</section></div>
+    </>}
+    {view === 'Research' && <div className="research-layout"><aside className="research-sidebar"><form className="research-form" onSubmit={e => { e.preventDefault(); void run({ action: 'research', symbol, prompt }, 'Reading the disclosures and preparing research…'); }}><h2>Start with a question.</h2><label htmlFor="research-symbol">Security<select id="research-symbol" value={symbol} onChange={e => { setSymbol(e.target.value); setResearchId(''); }}>{snapshot.market.map(q => <option key={q.symbol} value={q.symbol}>{q.symbol} · {q.name}</option>)}</select></label><label htmlFor="research-question">Research question<textarea id="research-question" required rows={5} value={prompt} onChange={e => setPrompt(e.target.value)} /></label><button type="submit" className="button primary full-width" disabled={!!busy}>{busy === 'research' ? <Loader2 className="spin" size={15} /> : <Sparkles size={15} />}Generate research</button><div className="research-mode"><span className={`status-dot ${snapshot.connections.nicrron.configured ? 'positive-bg' : ''}`} /><span>{snapshot.connections.nicrron.configured ? 'Nicrron inference configured' : 'Sample mode · configure Nicrron for inference'}</span></div><p className="helper">Historical issuer disclosures available for NVDA, MSFT, and AAPL.</p></form><div className="research-history"><div className="section-line"><h3>Research history</h3><span>{research.length}</span></div>{research.map(memo => <button type="button" key={memo.id} className={selectedResearch?.id === memo.id ? 'active' : ''} onClick={() => { setResearchId(memo.id); setSymbol(memo.symbol); }}><span><strong>{memo.symbol}</strong><small>{time(memo.createdAt)}</small></span><p>{memo.title}</p><ChevronRight size={14} /></button>)}</div></aside><div>{selectedResearch ? <ResearchMemo key={selectedResearch.id} research={selectedResearch} snapshot={snapshot} busy={busy} run={run} openEvidence={setEvidence} /> : <div className="panel"><Empty title="Evidence comes first." description="Choose a supported security and generate a memo. Each factual claim links to the source it came from." /></div>}</div></div>}
+    {view === 'Orders' && <><div className="orders-toolbar"><div className="filter-tabs">{['all', 'review', 'approved', 'blocked', 'executed', 'rejected'].map(status => <button type="button" className={orderFilter === status ? 'active' : ''} key={status} onClick={() => setOrderFilter(status)}>{status === 'all' ? 'All orders' : status === 'review' ? 'Needs review' : status}<span>{orders.filter(o => status === 'all' || o.status === status).length}</span></button>)}</div></div><div className="orders-layout"><section className="order-list panel">{filteredOrders.length ? filteredOrders.map(order => <button type="button" className={`order-list-row ${selectedOrder?.id === order.id ? 'active' : ''}`} key={order.id} onClick={() => setOrderId(order.id)}><div className="order-list-top"><span className="inline"><Ticker symbol={order.symbol} small /><strong>{order.symbol}</strong></span><Badge status={order.status} /></div><div className="order-list-main"><span>{order.side === 'buy' ? 'Buy' : 'Sell'} {number(order.quantity)} shares</span><strong className="mono">{money(order.notional)}</strong></div><div className="order-list-bottom"><span>{time(order.createdAt)}</span><span>{order.checks.filter(c => c.passed).length}/{order.checks.length} checks<ChevronRight size={12} /></span></div></button>) : <Empty title="No orders in this view." description="Choose another status or propose an order from a research memo." />}</section><div>{selectedOrder ? <OrderDetails order={selectedOrder} snapshot={snapshot} busy={busy} run={run} openEvidence={setEvidence} /> : <div className="panel"><Empty title="Your next decision starts here." description="Propose an order from a research memo to inspect its permission checks." ><button className="button primary" type="button" onClick={() => navigate('Research')}>Open research<ArrowRight size={14} /></button></Empty></div>}</div></div></>}
+    {view === 'Mandate' && <MandateEditor key={snapshot.state.policy.version} policy={snapshot.state.policy} busy={busy} run={run} />}
+    {view === 'Audit trail' && <section className="panel audit-panel"><div className="audit-toolbar"><div className="search-input"><Search size={16} /><input type="search" aria-label="Search audit trail" placeholder="Search actions, agents, or trace IDs…" value={auditQuery} onChange={e => setAuditQuery(e.target.value)} /></div><label className="inline"><span className="small muted">Decision</span><select aria-label="Filter audit decision" value={auditFilter} onChange={e => setAuditFilter(e.target.value)}><option value="all">All decisions</option><option value="allowed">Allowed</option><option value="blocked">Blocked</option><option value="review">Review</option><option value="error">Error</option></select></label><span className="small muted">{audits.length} events</span></div><div className="table-scroll"><table className="data-table audit-table"><thead><tr><th>Time</th><th>Agent / tool</th><th>Decision</th><th>Event</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{audits.map(event => <AuditRow key={event.id} event={event} expanded={expandedEvent === event.id} onToggle={() => setExpandedEvent(expandedEvent === event.id ? '' : event.id)} />)}</tbody></table></div>{!audits.length && <Empty title="No matching events." description="Try a different search or decision filter." />}<div className="audit-footer"><LockKeyhole size={13} /><span>Local paper-workflow record. PRISM delivery status is visible in Connections.</span><button className="text-button" type="button" onClick={exportAudit}><Download size={13} />Export JSON</button></div></section>}
+    {view === 'Connections' && <div className="connections-layout"><section className="panel connections-panel"><div className="panel-heading"><h2>Workspace integrations</h2><button type="button" className="button secondary compact" disabled={!!busy} onClick={() => void run({ action: 'test_connections' }, 'Testing configured connections…')}><RefreshCw size={13} />Test connections</button></div><div className="connection-item"><span className="connection-logo">N</span><div className="connection-main"><div className="section-line"><h3>Nicrron</h3><Badge status={snapshot.connections.nicrron.configured ? 'allowed' : 'sample'}>{snapshot.connections.nicrron.configured ? 'Configured' : 'Not configured'}</Badge></div><p>Model inference for research and evidence-backed proposals.</p><dl><div><dt>Model</dt><dd>{snapshot.connections.nicrron.model || 'Not selected'}</dd></div><div><dt>Current source mode</dt><dd>{snapshot.connections.nicrron.configured ? 'API inference available' : 'Explicitly labelled sample research'}</dd></div></dl></div></div><div className="connection-item"><span className="connection-logo prism-logo"><Layers3 size={23} /></span><div className="connection-main"><div className="section-line"><h3>PRISM</h3><Badge status={snapshot.connections.prism.configured ? 'allowed' : 'sample'}>{snapshot.connections.prism.configured ? 'Configured' : 'Not configured'}</Badge></div><p>Agent traces, knowledge retrieval, failure analysis, and evaluation.</p><dl><div><dt>Last delivery status</dt><dd>{snapshot.state.integration.prismLastStatus || 'No delivery attempted'}</dd></div><div><dt>Knowledge base</dt><dd>{snapshot.state.integration.knowledgeBaseSynced ? 'Sources synced' : 'Not synced'}</dd></div><div><dt>Guardrail enforcement</dt><dd>{snapshot.connections.prism.enforce ? 'Enabled' : 'Not enabled'}</dd></div></dl><button type="button" className="button secondary compact" disabled={!!busy || !snapshot.connections.prism.configured} onClick={() => void run({ action: 'sync_sources' }, 'Syncing historical sources to PRISM…')}><Database size={13} />Sync source evidence</button></div></div><div className="connection-item"><span className="connection-logo paper-logo"><ShieldCheck size={23} /></span><div className="connection-main"><div className="section-line"><h3>Paper execution</h3><Badge status="allowed">Available</Badge></div><p>Deterministic permission checks and a synthetic portfolio ledger.</p><dl><div><dt>Market</dt><dd>Synthetic replay · {date(snapshot.connections.replayDate)}</dd></div><div><dt>Broker connection</dt><dd>None · no real-money execution</dd></div></dl></div></div></section><aside className="connection-guide"><h2>Configure your workspace.</h2><p>Keys stay on the server. Add the integration variables to your local <code>.dev.vars</code> file, then restart the development server.</p><div className="env-example"><span>NICRRON_API_KEY</span><span>NICRRON_MODEL</span><span>PRISM_API_KEY</span><span>PRISM_PROJECT_ID</span><span>PRISM_AGENT_ID</span><span>PRISM_ENFORCE</span></div><p className="helper">A configured key is not proof of connectivity. Run a connection test, then generate research to inspect a real trace.</p><div className="quiet-note"><LockKeyhole size={17} /><p>Never enter API keys in research prompts or commit them to your repository.</p></div><div className="reset-section"><h3>Reset paper workspace</h3><p>Restore the seeded portfolio, research, and audit record.</p>{resetConfirm ? <div className="reset-confirm"><p>This replaces the current paper workspace. Continue?</p><div className="inline"><button type="button" className="button danger compact" disabled={!!busy} onClick={() => void run({ action: 'reset' })}>Reset workspace</button><button type="button" className="button secondary compact" onClick={() => setResetConfirm(false)}>Cancel</button></div></div> : <button type="button" className="text-button negative" onClick={() => setResetConfirm(true)}>Reset demo data<RefreshCw size={13} /></button>}</div></aside></div>}
+    <footer className="workspace-footer"><span><span className="footer-mark">M</span>Mandate · Evidence before execution.</span><span>Paper environment<span className="footer-divider">/</span>Historical sources · Synthetic market</span></footer>
+    </>}
+    </main></div>{toast && <div className={`toast ${toast.error ? 'toast-error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <XCircle size={17} /> : busy ? <Loader2 className="spin" size={17} /> : <CheckCircle2 size={17} />}<span>{toast.message}</span><button type="button" aria-label="Dismiss notification" onClick={() => setToast(null)}><X size={15} /></button></div>}{evidence && <EvidenceDrawer evidence={evidence} close={closeEvidence} />}
+  </div>;
+}
 
-      <div
-        aria-hidden="true"
-        className="grid h-[calc(100%-76px)] grid-cols-[180px_minmax(0,1fr)_260px] gap-10 px-6 pb-24 pt-10 opacity-55 max-lg:grid-cols-[150px_minmax(0,1fr)] max-sm:grid-cols-1 sm:px-14"
-      >
-        <aside className="hidden border-r border-stone-200 pr-7 sm:block">
-          <div className="mb-6 h-2.5 w-16 rounded-full bg-stone-200" />
-          <div className="space-y-4">
-            {sidebarWidths.map((width) => (
-              <div key={width} className="flex items-center gap-3">
-                <span className="h-4 w-4 rounded bg-stone-200" />
-                <span
-                  className="h-2.5 rounded-full bg-stone-200"
-                  style={{ width: `${width}%` }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mb-6 mt-9 h-2.5 w-24 rounded-full bg-stone-200" />
-          <div className="space-y-4">
-            {sidebarWidths.slice(0, 3).map((width) => (
-              <span
-                key={width}
-                className="block h-2.5 rounded-full bg-stone-200"
-                style={{ width: `${width}%` }}
-              />
-            ))}
-          </div>
-        </aside>
-
-        <article className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <div className="space-y-3">
-            <div className="h-2.5 w-28 rounded-full bg-stone-200" />
-            <div className="h-7 w-4/5 rounded-lg bg-stone-200" />
-            <div className="h-7 w-3/5 rounded-lg bg-stone-200" />
-          </div>
-          <div className="min-h-[240px] flex-1 rounded-2xl bg-stone-200" />
-          <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-full bg-stone-200" />
-            <span className="h-2.5 w-28 rounded-full bg-stone-200" />
-          </div>
-          <div className="space-y-2">
-            {articleWidths.map((width) => (
-              <span
-                key={width}
-                className="block h-2.5 rounded-full bg-stone-200"
-                style={{ width: `${width}%` }}
-              />
-            ))}
-          </div>
-        </article>
-
-        <aside className="space-y-5 max-lg:hidden">
-          {[0, 1].map((card) => (
-            <div
-              key={card}
-              className="space-y-4 rounded-2xl border border-stone-200 bg-white/70 p-6"
-            >
-              <span className="block h-10 w-10 rounded-full bg-stone-200" />
-              <span className="block h-3 w-3/5 rounded-full bg-stone-200" />
-              <span className="block h-2.5 w-full rounded-full bg-stone-200" />
-              <span className="block h-2.5 w-4/5 rounded-full bg-stone-200" />
-              <span className="block h-8 w-24 rounded-lg bg-stone-200" />
-            </div>
-          ))}
-        </aside>
-      </div>
-
-      <output
-        aria-live="polite"
-        aria-atomic="true"
-        className="absolute left-1/2 top-[clamp(96px,13vh,122px)] w-[min(620px,calc(100%-40px))] -translate-x-1/2 rounded-[18px] border border-stone-200 bg-white/95 px-5 py-5 shadow-[0_18px_50px_rgb(24_24_27/9%)] backdrop-blur-sm"
-      >
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-stone-500">
-          Building your site
-        </p>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Your site is taking shape
-        </h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Your first version will appear here automatically when it’s ready.
-        </p>
-      </output>
-    </main>
-  );
+function AuditRow({ event, expanded, onToggle }: { event: AuditEvent; expanded: boolean; onToggle: () => void }) {
+  return <><tr><td><span className="mono">{time(event.time)}</span><small className="table-date">{date(event.time)}</small></td><td><strong>{event.agent}</strong><code className="tool-name">{event.tool}</code></td><td><Badge status={event.decision} /></td><td className="audit-message">{event.message}</td><td><button type="button" className="icon-button" aria-label={`${expanded ? 'Hide' : 'Show'} details for ${event.tool}`} aria-expanded={expanded} onClick={onToggle}><ChevronDown size={15} className={expanded ? 'rotated' : ''} /></button></td></tr>{expanded && <tr className="audit-expanded"><td colSpan={5}><div><strong>Trace ID</strong><code>{event.traceId}</code>{event.orderId && <><strong>Order ID</strong><code>{event.orderId}</code></>}<strong>Recorded details</strong><pre>{JSON.stringify(event.details || { message: event.message }, null, 2)}</pre></div></td></tr>}</>;
 }

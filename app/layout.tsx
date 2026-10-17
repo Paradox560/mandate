@@ -1,26 +1,12 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Starter Project",
-  description: "A clean starting point for building your site.",
-  other: {
-    "codex-preview": "development",
-  },
-  icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-  },
+  title: 'Mandate — Investment Desk',
+  description: 'Cited equity research, reviewable paper orders, and enforced investment permissions for small investment teams.',
+  other: { 'codex-preview': 'development' },
+  icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
-    </html>
-  );
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="en"><body><a className="sr-only skip-link" href="#main-content">Skip to main content</a>{children}</body></html>;
 }
