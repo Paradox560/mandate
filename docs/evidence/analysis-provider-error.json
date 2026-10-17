@@ -1,0 +1,20 @@
+{
+  "capturedAt": "2026-10-17T18:42:31.863761+00:00",
+  "source": "PRISM trace detail API",
+  "traceId": "c17d8e13-7371-49b0-86ad-8670acb46cb9",
+  "evaluation": {
+    "id": "6eaf3c23-fb30-421f-813c-96a629194cea",
+    "customer_satisfaction": null,
+    "intent_detected": "evaluation_failed",
+    "response_quality": null,
+    "flag_for_review": true,
+    "flag_reason": "analyze_trace error: HTTPStatusError: 401 from https://api.anthropic.com/v1/messages: authentication_error: invalid x-api-key",
+    "industry": null,
+    "industry_scores": {
+      "error": "401 from https://api.anthropic.com/v1/messages: authentication_error: invalid x-api-key",
+      "error_type": "HTTPStatusError"
+    },
+    "created_at": "2026-10-17T18:40:43.056561Z"
+  },
+  "explanation": "PRISM reports its upstream Anthropic credential is invalid. This is PRISM deep analysis, separate from the working Nicrron inference and PRISM guardrail calls."
+}

@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-10-17T18:43:41.370481+00:00",
+  "source": "PRISM API",
+  "response": {
+    "run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+    "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+    "state": "done",
+    "summary": {
+      "run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+      "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+      "clusters_seen": 2,
+      "clusters_created": 2,
+      "clusters_updated": 2,
+      "clusters_changed": 2,
+      "clusters_reopened": 0,
+      "clusters_frozen": 0,
+      "clusters_judged": 1,
+      "clusters_lease_reclaimed": 0,
+      "coverage": {
+        "failing_traces": 60,
+        "categorized_traces": 60,
+        "coverage_pct": 100.0,
+        "failing_trace_analyses": 0,
+        "categorized_trace_analyses": 0,
+        "failing_trajectories": 60,
+        "categorized_trajectories": 60
+      }
+    },
+    "error": null,
+    "charged": true,
+    "charge_skipped_reason": null,
+    "started_at": "2026-10-17T18:42:53.814875+00:00",
+    "finished_at": "2026-10-17T18:43:18.911944+00:00"
+  }
+}

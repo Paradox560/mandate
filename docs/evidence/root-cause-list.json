@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-10-17T18:43:51.348966+00:00",
+  "source": "PRISM API",
+  "response": {
+    "total": 2,
+    "clusters": [
+      {
+        "id": "53951dca-24f5-4f5b-814c-5a9b89e913ce",
+        "cluster_key": "trajectory_rule:agent:mandate paper trader:CORR-001+ROB-001",
+        "label": "failures in Mandate Paper Trader on path request_init>llm_call>tool_call>final_answer (Task Completion, Error Handling)",
+        "cause_class": "tool",
+        "evidence_tier": "tentative",
+        "severity": "medium",
+        "status": "open",
+        "member_count": 7,
+        "trend": "rising",
+        "prompt_hash": null,
+        "suspect_files": [],
+        "suspect_commit": null,
+        "suspect_commit_at": null,
+        "owner_email": null,
+        "localization_status": "not_attempted",
+        "resolution_reason": null,
+        "human_verified_class": null,
+        "first_seen_at": "2026-10-17T15:29:06.048928+00:00",
+        "last_seen_at": "2026-10-17T15:37:51.994526+00:00",
+        "resolved_at": null,
+        "reopened_at": null,
+        "updated_at": "2026-10-17T18:42:54.069701+00:00",
+        "path_signature": "request_init>llm_call>tool_call>final_answer",
+        "agent_name": "Mandate Paper Trader"
+      },
+      {
+        "id": "e2e3b648-f936-4afd-92fd-71789e54d6f9",
+        "cluster_key": "trajectory_rule:agent:mandate paper trader:CORR-001+ROB-001+SAFETY-006",
+        "label": "failures in Mandate Paper Trader on path request_init>retrieval>tool_call>tool_call>final_answer (Task Completion, Error Handling, Guardrail Verdict)",
+        "cause_class": "prompt",
+        "evidence_tier": "needs_review",
+        "severity": "high",
+        "status": "open",
+        "member_count": 53,
+        "trend": "rising",
+        "prompt_hash": null,
+        "suspect_files": [],
+        "suspect_commit": null,
+        "suspect_commit_at": null,
+        "owner_email": null,
+        "localization_status": "not_attempted",
+        "resolution_reason": null,
+        "human_verified_class": null,
+        "first_seen_at": "2026-10-17T15:38:17.827986+00:00",
+        "last_seen_at": "2026-10-17T18:42:11.715899+00:00",
+        "resolved_at": null,
+        "reopened_at": null,
+        "updated_at": "2026-10-17T18:42:54.069701+00:00",
+        "path_signature": null,
+        "agent_name": "Mandate Paper Trader"
+      }
+    ]
+  }
+}

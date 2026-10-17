@@ -1,0 +1,387 @@
+{
+  "capturedAt": "2026-10-17T18:43:52.291123+00:00",
+  "source": "PRISM API",
+  "response": {
+    "cluster": {
+      "id": "53951dca-24f5-4f5b-814c-5a9b89e913ce",
+      "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+      "cluster_key": "trajectory_rule:agent:mandate paper trader:CORR-001+ROB-001",
+      "label": "failures in Mandate Paper Trader on path request_init>llm_call>tool_call>final_answer (Task Completion, Error Handling)",
+      "cause_class": "tool",
+      "evidence_tier": "tentative",
+      "diagnosis": {
+        "class": "tool",
+        "judge": null,
+        "purity": null,
+        "rationale": "decisive detector vote: tool (failed_tool_call); no judge corroboration",
+        "readiness": {
+          "patch_ready": false,
+          "prompt_hash": false,
+          "source_signals": false,
+          "localization_hit": false,
+          "replayable_traces": true
+        },
+        "localization": {
+          "hit": false,
+          "note": null,
+          "status": "not_attempted",
+          "suspect_file_count": 0,
+          "prompt_hash_matched": false,
+          "prompt_hash_present": false,
+          "suspect_window_days": null
+        },
+        "decision_path": [
+          "decisive detector vote: tool (failed_tool_call)",
+          "no judge corroboration"
+        ],
+        "engine_run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+        "evidence_tier": "tentative",
+        "detector_votes": [
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": true,
+            "detector": "failed_tool_call",
+            "fire_rate": 1.0,
+            "votes_for": [
+              "tool"
+            ],
+            "fired_count": 7,
+            "member_count": 7,
+            "sample_trace_ids": [
+              "traj:28189688-1a82-4385-9f22-fe6c96070f57",
+              "traj:56d96818-1d82-4245-bb49-632824c8d982",
+              "traj:7a9df1a3-c188-4ed0-aec1-004125e3c916",
+              "traj:bfb5e400-70bf-4032-91e1-3527bfa948c9",
+              "traj:7a3c69f0-7a28-4e74-9778-429a1cadebbf"
+            ]
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": false,
+            "detector": "retrieval_without_grounding",
+            "fire_rate": 0.143,
+            "votes_for": [
+              "rag",
+              "knowledge_gap"
+            ],
+            "fired_count": 1,
+            "member_count": 7,
+            "sample_trace_ids": [
+              "traj:bfb5e400-70bf-4032-91e1-3527bfa948c9"
+            ]
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "loop_repetition",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "prompt",
+              "code"
+            ],
+            "fired_count": 0,
+            "member_count": 7,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": false,
+            "detector": "premature_termination",
+            "fire_rate": 0.143,
+            "votes_for": [
+              "prompt",
+              "policy"
+            ],
+            "fired_count": 1,
+            "member_count": 7,
+            "sample_trace_ids": [
+              "traj:8b590503-fab6-45ef-9f9a-1f909d11442e"
+            ]
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "guardrail_flag",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "policy"
+            ],
+            "fired_count": 0,
+            "member_count": 7,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "reasoning_action_mismatch",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "prompt",
+              "code"
+            ],
+            "fired_count": 0,
+            "member_count": 7,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": false,
+            "detector": "voice_boundary_drift",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "tool"
+            ],
+            "fired_count": 0,
+            "member_count": 7,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "unsupported_answer",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "prompt"
+            ],
+            "fired_count": 0,
+            "member_count": 7,
+            "sample_trace_ids": []
+          }
+        ],
+        "detector_findings": [],
+        "judge_consistency": null,
+        "evidence_trace_ids": [
+          "b042b2ac-2252-4a18-abdc-9bb302fecfaa",
+          "ed082c8a-b8ff-4031-93eb-d22d0575cd7a",
+          "022ab2ec-6ab5-499e-8d54-4ecdd723cff1",
+          "c2b232d1-44b1-4998-b3c7-d37057b7066d",
+          "674db0f8-2a7a-4d57-b417-20079f9f042e",
+          "6ad6577c-b906-404e-8111-6bd0c6ed06bf",
+          "a2d70ad6-ee12-42a6-8bb7-ba512be1aef2"
+        ],
+        "judged_member_count": null,
+        "span_evidence_version": 2,
+        "detector_vote_snapshot": [
+          "tool"
+        ]
+      },
+      "severity": "medium",
+      "prompt_hash": null,
+      "suspect_files": [],
+      "suspect_commit": null,
+      "suspect_commit_at": null,
+      "owner_email": null,
+      "evidence_trace_ids": [
+        "b042b2ac-2252-4a18-abdc-9bb302fecfaa",
+        "ed082c8a-b8ff-4031-93eb-d22d0575cd7a",
+        "022ab2ec-6ab5-499e-8d54-4ecdd723cff1",
+        "c2b232d1-44b1-4998-b3c7-d37057b7066d",
+        "674db0f8-2a7a-4d57-b417-20079f9f042e",
+        "6ad6577c-b906-404e-8111-6bd0c6ed06bf",
+        "a2d70ad6-ee12-42a6-8bb7-ba512be1aef2"
+      ],
+      "member_count": 7,
+      "trend": "rising",
+      "status": "open",
+      "resolved_at": null,
+      "reopened_at": null,
+      "first_seen_at": "2026-10-17T15:29:06.048928+00:00",
+      "last_seen_at": "2026-10-17T15:37:51.994526+00:00",
+      "detector_evidence": [
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": true,
+          "detector": "failed_tool_call",
+          "fire_rate": 1.0,
+          "votes_for": [
+            "tool"
+          ],
+          "fired_count": 7,
+          "member_count": 7,
+          "sample_trace_ids": [
+            "traj:28189688-1a82-4385-9f22-fe6c96070f57",
+            "traj:56d96818-1d82-4245-bb49-632824c8d982",
+            "traj:7a9df1a3-c188-4ed0-aec1-004125e3c916",
+            "traj:bfb5e400-70bf-4032-91e1-3527bfa948c9",
+            "traj:7a3c69f0-7a28-4e74-9778-429a1cadebbf"
+          ]
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": false,
+          "detector": "retrieval_without_grounding",
+          "fire_rate": 0.143,
+          "votes_for": [
+            "rag",
+            "knowledge_gap"
+          ],
+          "fired_count": 1,
+          "member_count": 7,
+          "sample_trace_ids": [
+            "traj:bfb5e400-70bf-4032-91e1-3527bfa948c9"
+          ]
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "loop_repetition",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "prompt",
+            "code"
+          ],
+          "fired_count": 0,
+          "member_count": 7,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": false,
+          "detector": "premature_termination",
+          "fire_rate": 0.143,
+          "votes_for": [
+            "prompt",
+            "policy"
+          ],
+          "fired_count": 1,
+          "member_count": 7,
+          "sample_trace_ids": [
+            "traj:8b590503-fab6-45ef-9f9a-1f909d11442e"
+          ]
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "guardrail_flag",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "policy"
+          ],
+          "fired_count": 0,
+          "member_count": 7,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "reasoning_action_mismatch",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "prompt",
+            "code"
+          ],
+          "fired_count": 0,
+          "member_count": 7,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": false,
+          "detector": "voice_boundary_drift",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "tool"
+          ],
+          "fired_count": 0,
+          "member_count": 7,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "unsupported_answer",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "prompt"
+          ],
+          "fired_count": 0,
+          "member_count": 7,
+          "sample_trace_ids": []
+        }
+      ],
+      "human_verified_class": null,
+      "repo_id": null,
+      "source_signals": [],
+      "consumed_by_fix_attempt_id": null,
+      "fix_lease_expires_at": null,
+      "fix_lease_owner": null,
+      "localization_status": "not_attempted",
+      "resolution_reason": null,
+      "created_at": "2026-10-17T18:42:54.069701+00:00",
+      "updated_at": "2026-10-17T18:42:54.069701+00:00",
+      "path_signature": "request_init>llm_call>tool_call>final_answer",
+      "agent_name": "Mandate Paper Trader"
+    },
+    "members_sample": [
+      {
+        "trace_id": "traj:8b590503-fab6-45ef-9f9a-1f909d11442e",
+        "trace_occurred_at": "2026-10-17T15:37:51.994526+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:7a3c69f0-7a28-4e74-9778-429a1cadebbf",
+        "trace_occurred_at": "2026-10-17T15:29:32.789915+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:19018961-3005-433d-926f-4d9ef55cc2e3",
+        "trace_occurred_at": "2026-10-17T15:29:27.554771+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:56d96818-1d82-4245-bb49-632824c8d982",
+        "trace_occurred_at": "2026-10-17T15:29:26.638016+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:bfb5e400-70bf-4032-91e1-3527bfa948c9",
+        "trace_occurred_at": "2026-10-17T15:29:20.768917+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:28189688-1a82-4385-9f22-fe6c96070f57",
+        "trace_occurred_at": "2026-10-17T15:29:19.212789+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      },
+      {
+        "trace_id": "traj:7a9df1a3-c188-4ed0-aec1-004125e3c916",
+        "trace_occurred_at": "2026-10-17T15:29:06.048928+00:00",
+        "assigned_at": "2026-10-17T18:43:15.201659+00:00"
+      }
+    ],
+    "events": [
+      {
+        "event_type": "diagnosed",
+        "payload": {
+          "run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+          "reasons": [
+            "decisive detector vote: tool (failed_tool_call)",
+            "no judge corroboration"
+          ],
+          "severity": "medium",
+          "cause_class": "tool",
+          "evidence_tier": "tentative",
+          "source_signals": []
+        },
+        "actor": "rca",
+        "created_at": "2026-10-17T18:43:18.075629+00:00"
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-10-17T18:41:09.863691+00:00",
+  "source": "PRISM API",
+  "response": {
+    "traceIds": [
+      "ed943cd1-2008-40ab-8efe-457d8a32d7fb",
+      "28b23b28-80d9-4aa6-881f-7ab16eb66577",
+      "d477266d-1df0-4697-8718-10772ac80310",
+      "69f34f0f-66e0-4070-b531-7def4d24b8ad",
+      "3af76050-09c0-4f11-a82b-9c0736fe6cf8",
+      "c3d297a0-49a4-4dda-a3dc-dadb931a952b",
+      "e5634e31-941a-42ed-adf9-914e956d45b5",
+      "881f35c5-8075-488f-bd3f-152dc1655f13",
+      "923c9f16-2775-49eb-8061-501c84dff2e3",
+      "c17d8e13-7371-49b0-86ad-8670acb46cb9"
+    ],
+    "internalTraceIds": [
+      "a58f10bd-30f1-419c-b3ff-85f7c50ba252",
+      "3635e28c-1639-426c-8e58-ed1e28912198",
+      "f4b877b8-fc2e-4d2b-9e75-4621de12ccae",
+      "9e43396c-c1aa-463b-9a75-342fe72c6a3d",
+      "451ec8bf-a156-4b35-a339-c70aac08d24e",
+      "b9e44eb9-7b5f-438a-a893-50ad78c35db5",
+      "d35c4aed-bc21-41f0-ba41-be49d08c9277",
+      "44888295-425b-496c-8a55-8ae7184ff359",
+      "548097fb-4bac-42f4-b1ee-edd56c920df5",
+      "61bab66d-3669-4478-9ea6-7218e7b61477"
+    ],
+    "quote": {
+      "candidates": 10,
+      "estimated_units": 10,
+      "estimated_credits": 10,
+      "traces_per_credit": 1,
+      "selected": 10,
+      "balance": 200,
+      "affordable": true,
+      "affordable_traces": 200,
+      "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+      "mode": "full"
+    }
+  }
+}

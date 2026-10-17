@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-10-17T18:42:54.087726+00:00",
+  "source": "PRISM API",
+  "response": {
+    "runs": [
+      {
+        "run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+        "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+        "state": "running",
+        "summary": null,
+        "error": null,
+        "charged": null,
+        "charge_skipped_reason": null,
+        "started_at": "2026-10-17T18:42:53.814875+00:00",
+        "finished_at": null
+      }
+    ]
+  }
+}

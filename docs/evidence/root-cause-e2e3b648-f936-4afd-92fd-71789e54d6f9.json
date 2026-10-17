@@ -1,0 +1,510 @@
+{
+  "capturedAt": "2026-10-17T18:43:53.332501+00:00",
+  "source": "PRISM API",
+  "response": {
+    "cluster": {
+      "id": "e2e3b648-f936-4afd-92fd-71789e54d6f9",
+      "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+      "cluster_key": "trajectory_rule:agent:mandate paper trader:CORR-001+ROB-001+SAFETY-006",
+      "label": "failures in Mandate Paper Trader on path request_init>retrieval>tool_call>tool_call>final_answer (Task Completion, Error Handling, Guardrail Verdict)",
+      "cause_class": "prompt",
+      "evidence_tier": "needs_review",
+      "diagnosis": {
+        "class": "prompt",
+        "judge": {
+          "runs": 0,
+          "status": "credential_error",
+          "rationale": "judge could not run: the project's AI credential was rejected",
+          "raw_votes": [],
+          "consistency": 0.0,
+          "modal_class": "unknown"
+        },
+        "purity": null,
+        "rationale": "judge did not run: the project's AI credential was rejected (this is an outage, not an absence of evidence); decisive detector vote: prompt (failed_tool_call, premature_termination, unsupported_answer); multiple candidate classes, no judge to disambiguate",
+        "readiness": {
+          "patch_ready": false,
+          "prompt_hash": false,
+          "source_signals": false,
+          "localization_hit": false,
+          "replayable_traces": true
+        },
+        "localization": {
+          "hit": false,
+          "note": null,
+          "status": "not_attempted",
+          "suspect_file_count": 0,
+          "prompt_hash_matched": false,
+          "prompt_hash_present": false,
+          "suspect_window_days": null
+        },
+        "decision_path": [
+          "judge did not run: the project's AI credential was rejected (this is an outage, not an absence of evidence)",
+          "decisive detector vote: prompt (failed_tool_call, premature_termination, unsupported_answer)",
+          "multiple candidate classes, no judge to disambiguate"
+        ],
+        "engine_run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+        "evidence_tier": "needs_review",
+        "detector_votes": [
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": true,
+            "detector": "failed_tool_call",
+            "fire_rate": 1.0,
+            "votes_for": [
+              "tool"
+            ],
+            "fired_count": 53,
+            "member_count": 53,
+            "sample_trace_ids": [
+              "traj:e23f0727-8596-401b-b32c-0b9c3ddbc3c6",
+              "traj:5197b763-189d-4e55-8d3c-fff3877d7710",
+              "traj:ed017cb2-0d2c-451b-be83-9b731d1c7894",
+              "traj:9cccf15e-4b5e-4a08-a690-e5bdb7d6c777",
+              "traj:b869ded9-2414-4f8d-b554-4f6903262276"
+            ]
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": false,
+            "detector": "retrieval_without_grounding",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "rag",
+              "knowledge_gap"
+            ],
+            "fired_count": 0,
+            "member_count": 53,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "loop_repetition",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "prompt",
+              "code"
+            ],
+            "fired_count": 0,
+            "member_count": 53,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": true,
+            "detector": "premature_termination",
+            "fire_rate": 0.906,
+            "votes_for": [
+              "prompt",
+              "policy"
+            ],
+            "fired_count": 48,
+            "member_count": 53,
+            "sample_trace_ids": [
+              "traj:e23f0727-8596-401b-b32c-0b9c3ddbc3c6",
+              "traj:5197b763-189d-4e55-8d3c-fff3877d7710",
+              "traj:64445978-a713-4cc7-9065-15ac8317c9eb",
+              "traj:dbe2b092-ea4e-439a-ab58-a3bdc397135b",
+              "traj:5f04763d-ea4b-41fc-b43f-274fcc5c2ce0"
+            ]
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "guardrail_flag",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "policy"
+            ],
+            "fired_count": 0,
+            "member_count": 53,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": false,
+            "detector": "reasoning_action_mismatch",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "prompt",
+              "code"
+            ],
+            "fired_count": 0,
+            "member_count": 53,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 2,
+            "decisive": false,
+            "detector": "voice_boundary_drift",
+            "fire_rate": 0.0,
+            "votes_for": [
+              "tool"
+            ],
+            "fired_count": 0,
+            "member_count": 53,
+            "sample_trace_ids": []
+          },
+          {
+            "finding": false,
+            "version": 1,
+            "decisive": true,
+            "detector": "unsupported_answer",
+            "fire_rate": 0.774,
+            "votes_for": [
+              "prompt"
+            ],
+            "fired_count": 41,
+            "member_count": 53,
+            "sample_trace_ids": [
+              "traj:7b4f27da-048c-445e-bb23-5e89a48e64e5",
+              "traj:345d3ed1-5664-48d9-b3dd-58f104ad396f",
+              "traj:42f4995a-0b4c-4309-b4b4-c37b8ff5d8a2",
+              "traj:4283edc7-5879-43cf-9499-c7a1d54eaae9",
+              "traj:a6045bc6-cdf0-42d8-ac40-557f2113e2ff"
+            ]
+          }
+        ],
+        "detector_findings": [],
+        "judge_consistency": 0.0,
+        "evidence_trace_ids": [
+          "2d46b23d-9895-418e-a55c-0b1a45bf4129",
+          "9445201e-242a-4667-8dcc-c1a25a163769",
+          "d3748969-7172-4ad4-ba24-61d31eeba2ac",
+          "80288ef5-24af-49be-a081-aa7db80cd4ba",
+          "8df6c6aa-da8b-4997-b9ed-94766828549e",
+          "0d83e43e-b403-45e8-a1a4-6ebb70eafbf2",
+          "694c615b-4f66-4845-b9fc-19bd2e81cd94",
+          "c709f010-1008-41ff-bb65-4a20d40549e1",
+          "ba02c87f-ef73-4019-8718-72054462dc78",
+          "d33ce7eb-71b4-4cce-9790-1c82d4b0cd72"
+        ],
+        "judged_member_count": 53,
+        "span_evidence_version": 2,
+        "detector_vote_snapshot": [
+          "policy",
+          "prompt",
+          "tool"
+        ]
+      },
+      "severity": "high",
+      "prompt_hash": null,
+      "suspect_files": [],
+      "suspect_commit": null,
+      "suspect_commit_at": null,
+      "owner_email": null,
+      "evidence_trace_ids": [
+        "2d46b23d-9895-418e-a55c-0b1a45bf4129",
+        "9445201e-242a-4667-8dcc-c1a25a163769",
+        "d3748969-7172-4ad4-ba24-61d31eeba2ac",
+        "80288ef5-24af-49be-a081-aa7db80cd4ba",
+        "8df6c6aa-da8b-4997-b9ed-94766828549e",
+        "0d83e43e-b403-45e8-a1a4-6ebb70eafbf2",
+        "694c615b-4f66-4845-b9fc-19bd2e81cd94",
+        "c709f010-1008-41ff-bb65-4a20d40549e1",
+        "ba02c87f-ef73-4019-8718-72054462dc78",
+        "d33ce7eb-71b4-4cce-9790-1c82d4b0cd72"
+      ],
+      "member_count": 53,
+      "trend": "rising",
+      "status": "open",
+      "resolved_at": null,
+      "reopened_at": null,
+      "first_seen_at": "2026-10-17T15:38:17.827986+00:00",
+      "last_seen_at": "2026-10-17T18:42:11.715899+00:00",
+      "detector_evidence": [
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": true,
+          "detector": "failed_tool_call",
+          "fire_rate": 1.0,
+          "votes_for": [
+            "tool"
+          ],
+          "fired_count": 53,
+          "member_count": 53,
+          "sample_trace_ids": [
+            "traj:e23f0727-8596-401b-b32c-0b9c3ddbc3c6",
+            "traj:5197b763-189d-4e55-8d3c-fff3877d7710",
+            "traj:ed017cb2-0d2c-451b-be83-9b731d1c7894",
+            "traj:9cccf15e-4b5e-4a08-a690-e5bdb7d6c777",
+            "traj:b869ded9-2414-4f8d-b554-4f6903262276"
+          ]
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": false,
+          "detector": "retrieval_without_grounding",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "rag",
+            "knowledge_gap"
+          ],
+          "fired_count": 0,
+          "member_count": 53,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "loop_repetition",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "prompt",
+            "code"
+          ],
+          "fired_count": 0,
+          "member_count": 53,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": true,
+          "detector": "premature_termination",
+          "fire_rate": 0.906,
+          "votes_for": [
+            "prompt",
+            "policy"
+          ],
+          "fired_count": 48,
+          "member_count": 53,
+          "sample_trace_ids": [
+            "traj:e23f0727-8596-401b-b32c-0b9c3ddbc3c6",
+            "traj:5197b763-189d-4e55-8d3c-fff3877d7710",
+            "traj:64445978-a713-4cc7-9065-15ac8317c9eb",
+            "traj:dbe2b092-ea4e-439a-ab58-a3bdc397135b",
+            "traj:5f04763d-ea4b-41fc-b43f-274fcc5c2ce0"
+          ]
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "guardrail_flag",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "policy"
+          ],
+          "fired_count": 0,
+          "member_count": 53,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": false,
+          "detector": "reasoning_action_mismatch",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "prompt",
+            "code"
+          ],
+          "fired_count": 0,
+          "member_count": 53,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 2,
+          "decisive": false,
+          "detector": "voice_boundary_drift",
+          "fire_rate": 0.0,
+          "votes_for": [
+            "tool"
+          ],
+          "fired_count": 0,
+          "member_count": 53,
+          "sample_trace_ids": []
+        },
+        {
+          "finding": false,
+          "version": 1,
+          "decisive": true,
+          "detector": "unsupported_answer",
+          "fire_rate": 0.774,
+          "votes_for": [
+            "prompt"
+          ],
+          "fired_count": 41,
+          "member_count": 53,
+          "sample_trace_ids": [
+            "traj:7b4f27da-048c-445e-bb23-5e89a48e64e5",
+            "traj:345d3ed1-5664-48d9-b3dd-58f104ad396f",
+            "traj:42f4995a-0b4c-4309-b4b4-c37b8ff5d8a2",
+            "traj:4283edc7-5879-43cf-9499-c7a1d54eaae9",
+            "traj:a6045bc6-cdf0-42d8-ac40-557f2113e2ff"
+          ]
+        }
+      ],
+      "human_verified_class": null,
+      "repo_id": null,
+      "source_signals": [],
+      "consumed_by_fix_attempt_id": null,
+      "fix_lease_expires_at": null,
+      "fix_lease_owner": null,
+      "localization_status": "not_attempted",
+      "resolution_reason": null,
+      "created_at": "2026-10-17T18:42:54.069701+00:00",
+      "updated_at": "2026-10-17T18:42:54.069701+00:00",
+      "path_signature": null,
+      "agent_name": "Mandate Paper Trader"
+    },
+    "members_sample": [
+      {
+        "trace_id": "traj:f37d7afd-86e6-482b-80bc-86cf242411cc",
+        "trace_occurred_at": "2026-10-17T18:42:11.715899+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:429c64dc-bc0b-43c4-8ee7-7d9b4ad28157",
+        "trace_occurred_at": "2026-10-17T18:42:06.931867+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:2ade0732-f04d-48ee-8b8c-1545ec6c6850",
+        "trace_occurred_at": "2026-10-17T18:41:43.271154+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:9f0d54af-a300-4b6f-aee2-95ed23266942",
+        "trace_occurred_at": "2026-10-17T18:41:42.241763+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:1402c482-21ce-4334-a281-5ab312da31a0",
+        "trace_occurred_at": "2026-10-17T18:41:39.888499+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:7357d6fb-09f7-4b1c-aff9-b497412f8769",
+        "trace_occurred_at": "2026-10-17T18:41:39.432583+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:301e6a1c-fe44-48e3-8ba8-3840e20fadfb",
+        "trace_occurred_at": "2026-10-17T18:41:35.783143+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:072c6a3c-dbe8-47b1-8441-e8fac7670b01",
+        "trace_occurred_at": "2026-10-17T18:41:34.061754+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:a76d7fe2-a304-4712-8750-d14c414b71dd",
+        "trace_occurred_at": "2026-10-17T18:41:30.676227+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:29616d0f-bcfa-480b-8e93-fabd1e2c04b2",
+        "trace_occurred_at": "2026-10-17T18:41:30.341160+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:13c81d0b-a15f-4da8-bacf-b1aff9cb6e8a",
+        "trace_occurred_at": "2026-10-17T18:41:27.265454+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:623c3bfa-0f86-4652-adca-22eb045b669b",
+        "trace_occurred_at": "2026-10-17T18:41:26.613647+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:10544177-38f3-4cf6-a3df-5ec412b3b11a",
+        "trace_occurred_at": "2026-10-17T18:41:26.469767+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:57a605d4-79bd-4662-9e9e-c3419a717640",
+        "trace_occurred_at": "2026-10-17T18:41:23.179193+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:06c5c967-8485-4958-84fd-8351fbec08be",
+        "trace_occurred_at": "2026-10-17T18:41:21.560544+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:4f80f36b-daa9-4953-bde5-c371828883ce",
+        "trace_occurred_at": "2026-10-17T18:41:17.948150+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:3f304aa3-388f-45d4-ab17-99799fad4b36",
+        "trace_occurred_at": "2026-10-17T18:41:17.159019+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:fcf61a3d-7d2e-46de-a0c2-9a5e904b2292",
+        "trace_occurred_at": "2026-10-17T18:41:14.477373+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:3e8951d6-aee5-4e51-90f1-0aa6d87b72af",
+        "trace_occurred_at": "2026-10-17T18:41:14.063492+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:2b85b29e-5ee6-425a-bf58-e949144cbc10",
+        "trace_occurred_at": "2026-10-17T18:41:12.399525+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:72c34262-e7d7-46b8-9e94-3935d520d2b4",
+        "trace_occurred_at": "2026-10-17T18:41:08.953085+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:4a7c28f6-40be-4b4e-9f05-2b29fa8c9f07",
+        "trace_occurred_at": "2026-10-17T18:41:08.662868+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:5eee132a-fed8-4e6f-b600-1323be5655e3",
+        "trace_occurred_at": "2026-10-17T18:41:06.784616+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:0217a408-6d1b-4872-b10c-127af363695c",
+        "trace_occurred_at": "2026-10-17T18:41:04.400980+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      },
+      {
+        "trace_id": "traj:96751b35-f80a-43e8-b381-529ec2542d48",
+        "trace_occurred_at": "2026-10-17T18:41:02.862688+00:00",
+        "assigned_at": "2026-10-17T18:42:54.871406+00:00"
+      }
+    ],
+    "events": [
+      {
+        "event_type": "diagnosed",
+        "payload": {
+          "run_id": "6973ad74-5d8d-477c-9b83-6aa58a565664",
+          "reasons": [
+            "judge did not run: the project's AI credential was rejected (this is an outage, not an absence of evidence)",
+            "decisive detector vote: prompt (failed_tool_call, premature_termination, unsupported_answer)",
+            "multiple candidate classes, no judge to disambiguate"
+          ],
+          "severity": "high",
+          "cause_class": "prompt",
+          "evidence_tier": "needs_review",
+          "source_signals": []
+        },
+        "actor": "rca",
+        "created_at": "2026-10-17T18:43:14.643545+00:00"
+      }
+    ]
+  }
+}

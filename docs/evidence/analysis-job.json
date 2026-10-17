@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-10-17T18:41:23.534836+00:00",
+  "source": "PRISM API",
+  "response": {
+    "job_id": "ca337acd-b88f-4f78-bd08-0d4858cbd407",
+    "project_id": "fbd48a20-1e45-4cba-b5e2-2fa3e0ed57cf",
+    "state": "pending",
+    "mode": "full",
+    "user_id": null,
+    "total": 0,
+    "processed": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "error": null,
+    "started_at": null,
+    "finished_at": null,
+    "last_trace_id": null,
+    "cancel_requested": false,
+    "selected": 10,
+    "selected_candidates": 10
+  }
+}

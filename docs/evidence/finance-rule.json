@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-10-17T18:40:19.094734+00:00",
+  "source": "PRISM API",
+  "response": {
+    "id": "2f194101-36bf-439e-9772-b939efc0597f",
+    "name": "Mandate financial authority boundary",
+    "rule_type": "custom_regex",
+    "action": "block",
+    "severity": "high",
+    "enabled": true
+  }
+}

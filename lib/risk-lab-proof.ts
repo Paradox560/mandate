@@ -49,10 +49,18 @@ export const riskProviderProof: RiskLabSnapshot['providerProof'] = {
     ]
   },
   "rootCause": {
-    "status": "unverified",
-    "checkedAt": "2026-10-17T18:42:31.863761+00:00",
-    "evidenceUrl": "/proofs/analysis-provider-error.json",
-    "summary": "Root Cause proof is incomplete. PRISM deep analysis failed for all 10 selected blocked traces: its upstream model provider returned an authentication error. Guardrail enforcement and Nicrron inference succeeded."
+    "status": "verified",
+    "checkedAt": "2026-10-17T18:46:39.331854+00:00",
+    "evidenceUrl": "/proofs/root-cause.json",
+    "summary": "PRISM created a 53-member cluster; six current blocked runs were matched to it. Its proposed prompt cause is marked needs_review because the AI judge could not run (credential error). The cluster is recorded; the diagnosis is not confirmed.",
+    "traceIds": [
+      "d0583824-1964-49c9-a41c-f1e40050da5f",
+      "22bc5240-6ffc-4465-bcd4-5e32159696ad",
+      "cbfecd6f-523c-45e5-bde1-b6609b16d2e8",
+      "b8faf9e5-becf-450b-8d83-1dc9cdea5b80",
+      "781e2364-be96-4537-96b7-24563e4946e3",
+      "81c8d361-96c8-412d-b941-08cc89fa4730"
+    ]
   }
 };
 
