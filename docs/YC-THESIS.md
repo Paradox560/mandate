@@ -4,7 +4,7 @@ Mandate is a proposed approval layer for investment teams using AI research. A c
 
 ## Customer and problem hypothesis
 
-Start with small public-equity funds and family offices where a few people share research, portfolio management and operations. The hypothesis is that reviewing an agent's work across a research note, a spreadsheet and an order ticket is expensive enough to justify a dedicated workflow. This has not been established through customer interviews.
+The confirmed initial segment is small public-equity funds where a few people share research, portfolio management and operations. Family offices are an adjacent segment to investigate. The hypothesis is that reviewing an agent's work across a research note, a spreadsheet and an order ticket is expensive enough to justify a dedicated workflow. This has not been established through customer interviews.
 
 The initial job is narrow: determine what an agent proposed, which source supports each factual claim, whether the portfolio permits it, who approved it and whether the executed parameters match. The product does not need to forecast returns to make that review useful.
 
@@ -16,6 +16,8 @@ The initial job is narrow: determine what an agent proposed, which source suppor
 | [Alter](https://www.ycombinator.com/companies/alter) | Summer 2025 | Parameter-level authorization and auditability for agent tool calls. | Check an investment mandate before mutating the paper ledger and bind approval to the exact order. |
 
 These are product inspirations, not partnerships, integrations or claims of feature parity. Mandate has no asserted relationship with either company.
+
+The [full startup shortlist](YC-STARTUPS.md) maps relevant companies to the event's three tracks. Mandate's primary fit is **Trust & Risk**: a finance guardrail must stop an actual action and expose the downstream result. **Money Intelligence** is a secondary fit through cited issuer research and source retrieval. These mappings are our interpretation of the event brief, not an organizer endorsement.
 
 ## Proposed advantage to test
 

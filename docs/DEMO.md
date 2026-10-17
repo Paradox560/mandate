@@ -1,6 +1,6 @@
 # Demonstration and proof checklist
 
-This is a runbook, not a record of completed tests. Checkbox items begin incomplete and require stored evidence from an actual run.
+This document separates recorded build-session checks from the proof still needed for judging. Unchecked items require evidence from an actual run.
 
 ## Explain the clocks first
 
@@ -26,18 +26,44 @@ Two reports and one blocked order are clearly labeled samples. Their `seed-*` ID
 
 These are intended code behaviors to verify with the implementation's checks. A fixture with `status: blocked` does not prove any enforcement path ran. A local role name is not production authentication.
 
-## PRISM proof required before claiming completion
+## Recorded checks — October 17, 2026
 
-- [ ] Confirm a real trace is visible in the intended project; save its ID and the dashboard receipt.
-- [ ] Capture at least six real operations in one coherent workflow with their inputs, outputs and shared run/session identity. Suggested operations: market read, evidence retrieval, research composition, portfolio read, proposal, mandate evaluation, human approval and paper execution. Count only operations actually performed and represented in PRISM.
-- [ ] Generate and retain **at least 50 actual runs**, identifying input, model/prompt version, policy version, quote snapshot, evidence set, resulting checks and ledger outcome. Seed events and duplicated dashboard rows are not runs.
-- [ ] Configure a custom evaluator in the PRISM UI. Suggested rubric: claims resolve to retrieved sources; the proposed security matches those sources; a proposed order respects the supplied mandate; blocked or unapproved orders cause no fill. Save the evaluator configuration and its actual results.
-- [ ] Configure an alert with an achievable condition, trigger it with an actual failing run, and retain the fired alert and matching trace. A configured rule without a firing is insufficient.
-- [ ] Show a cluster containing **at least three related failures**. A suggested family is unsupported or mismatched evidence in research that the local gate rejects. Retain the individual traces and the cluster's stated explanation.
-- [ ] Make a focused v2 fix and rerun the **same inputs and frozen snapshots**. Save the v1/v2 outputs and evaluator results, including any failures that remain. Keep local ledger protections active in both versions.
-- [ ] Configure an entitled PRISM blocking rule, turn on `PRISM_ENFORCE`, and run a matching input. Capture the actual verdict plus downstream proof: no model response or fill after the block, and a correctly linked trace. Also test an unevaluated/error response and confirm Mandate blocks the dependent action.
+- **47 unit tests passed**, TypeScript checking passed, and the Desktop production build/setup passed.
+- **7 Playwright tests passed in 30.2 seconds**, including a real PRISM-enforced MSFT buy-one proposal, approval and execution with exactly one fill, plus an oversized order denied without changing the ledger.
+- Live Nicrron and PRISM provider calls were verified. The rule **Mandate blocked order** returned an evaluated block for an oversized-order scenario with enforcement enabled; portfolio revision **2** remained unchanged. Trace: `80288ef5-24af-49be-a081-aa7db80cd4ba`.
 
-The [PRISM documentation](https://blockconvey.com/docs) describes the platform contracts. This checklist describes the demonstration we must produce. Neither a working API adapter nor this document proves that an evaluator, alert, failure cluster or remediation run exists.
+These are build-session results reported by the implementation and browser verification tasks. They are not continuous monitoring or proof of the remaining PRISM dashboard criteria. Repeat local checks using README.md. `node scripts/verify-guardrails.mjs` generates three real oversize scenarios with enforcement required and asserts a remote block and unchanged ledger; its presence does not establish that PRISM grouped those runs.
+
+Three further real enforced blocks were recorded by `scripts/verify-guardrails.mjs` with an unchanged ledger: `0d83e43e-b403-45e8-a1a4-6ebb70eafbf2`, `8df6c6aa-da8b-4997-b9ed-94766828549e`, and `694c615b-4f66-4845-b9fc-19bd2e81cd94`. Local receipts are in the ignored `outputs/guardrail-proof.json.txt`. Their Block Check classifications and Intelligence grouping still need dashboard inspection.
+
+## Required event proofs
+
+The [MONEY TALKS 2 brief](https://docs.google.com/document/d/1rm5ev9mj_leu2w7OVlFVmKaCT-OvZZ9tSibbC4lzd08/edit?tab=t.0) requires PRISM and NicrronNinoo for every team, with **50+ actual runs before fixing** to supply analysis. Track-specific proofs differ. Mandate's primary track is **Trust & Risk**; cited research gives it a secondary **Money Intelligence** fit.
+
+Common evidence:
+
+- [x] Make actual provider requests through Nicrron and PRISM.
+- [ ] Retain 50+ actual agent runs before remediation, including inputs, version, evidence/quote snapshot and result. Seed records and copied rows do not count.
+
+Trust & Risk — all three required:
+
+- [x] Configure a custom finance guardrail in enforce mode and show it blocking a real run. The verified oversized-order trace is recorded above.
+- [ ] Open the Guardrails page and show **Block Check**: honoured, not honoured or unverifiable. Compare PRISM's classification with the actual downstream ledger result and explain whether it is correct. A local no-fill assertion does not replace this dashboard check.
+- [ ] Show an **Intelligence cluster of at least three failed or blocked runs**, its stated cause and an explanation. Three API blocks alone do not establish a cluster.
+
+Money Intelligence — additional proofs if entering this track:
+
+- [ ] Upload the historical issuer corpus to the PRISM Knowledge Base, assign it to the agent and show a run whose retrieval step actually uses it.
+- [ ] Show an Intelligence cluster of at least three failed runs and explain its cause.
+- [ ] Create a custom evaluator and show v1 and v2 scores on the **same inputs and frozen snapshots**. A suggested rubric checks that every factual claim resolves to a retrieved source and that a proposal's symbol matches its evidence.
+
+Money Operations — requirements for a separate operations entry, not extra Trust & Risk requirements:
+
+- [ ] Show one session's Steps tab with six or more actual tool calls.
+- [ ] Configure an alert and show it firing on a real run.
+- [ ] Show a three-or-more failure cluster, explain its cause and demonstrate v2 no longer failing on the same inputs.
+
+The [PRISM documentation](https://blockconvey.com/docs) establishes platform contracts. An adapter, test suite or this document does not establish a dashboard evaluator, alert, cluster or remediation result.
 
 ## Evidence corpus
 

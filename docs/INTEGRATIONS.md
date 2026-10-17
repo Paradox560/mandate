@@ -35,6 +35,12 @@ Use the same trace ID for evaluation and the submitted trace. After a remote blo
 
 ## What counts as integrated
 
-There are two intended external integrations: Nicrron inference and PRISM observability/retrieval/guardrail evaluation. Count PRISM as one service, not several integrations. Synthetic quotes, fixture evidence, the paper ledger and local mandate rules are application features.
+There are two external integrations: Nicrron inference and PRISM observability/retrieval/guardrail evaluation. Count PRISM as one service, not several integrations. Synthetic quotes, fixture evidence, the paper ledger and local mandate rules are application features.
 
 Verification must produce an actual Nicrron response and an actual PRISM trace visible in the selected project. Knowledge-base sync needs a real upload/search result. Remote enforcement needs a recorded verdict and confirmation that blocked work did not proceed. Until those receipts exist, describe the relevant feature as implemented or configured, with live verification pending. Follow the proof checklist in `DEMO.md`.
+
+## Recorded live verification — October 17, 2026
+
+Live Nicrron and PRISM requests were verified during the build session. The local and hosted demonstration configurations have `PRISM_ENFORCE=true`. The custom regex rule **Mandate blocked order** matches `\bMANDATE_BLOCK\b` and uses action **Block**. It stopped a real oversized-order scenario; portfolio revision **2** remained unchanged. The linked trace is `80288ef5-24af-49be-a081-aa7db80cd4ba`.
+
+Configure this rule on the PRISM Guardrails page: Add Rule → Custom Regex → rule name → Block → intended agent scope → pattern → Create Rule. The dashboard's regex preview is not an enforcement test. `node scripts/verify-guardrails.mjs` creates three real blocked-order runs and checks that the ledger is unchanged. Inspect PRISM's Block Check classification and Intelligence cluster separately; API receipts alone do not prove those dashboard results. See [the demo checklist](DEMO.md).

@@ -4,7 +4,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Mandate — Investment Desk',
   description: 'Cited equity research, reviewable paper orders, and enforced investment permissions for small investment teams.',
-  other: { 'codex-preview': 'development' },
   icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
