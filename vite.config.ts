@@ -4,6 +4,7 @@ import hostingConfig from "./.openai/hosting.json";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { sites } from "./build/sites-vite-plugin";
 import { connectorPreview } from "./build/connector-preview-plugin.mjs";
+import { fileURLToPath } from "node:url";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -37,6 +38,23 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  if (process.env.MANDATE_RUNTIME === "node") {
+    return {
+      server: {
+        host: "0.0.0.0",
+        ...(isCodexSeatbeltSandbox
+          ? { watch: { useFsEvents: false, usePolling: true } }
+          : {}),
+      },
+      resolve: {
+        alias: {
+          "cloudflare:workers": fileURLToPath(new URL("./runtime/node.ts", import.meta.url)),
+        },
+      },
+      plugins: [vinext()],
+    };
+  }
+
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
   process.env.WRANGLER_SEND_METRICS ??= "false";

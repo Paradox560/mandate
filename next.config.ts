@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  ...(process.env.MANDATE_RUNTIME === "node" ? { output: "standalone" } : {}),
 };
 
 export default nextConfig;
