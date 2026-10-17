@@ -1,0 +1,13 @@
+import {existsSync,readFileSync,writeFileSync,copyFileSync,mkdirSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {resolve} from 'node:path';
+if(!existsSync('.dev.vars'))copyFileSync('.dev.vars.example','.dev.vars');
+const build=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['run','build'],{stdio:'inherit'});if(build.status!==0)process.exit(build.status||1);
+const config=JSON.parse(readFileSync('dist/server/wrangler.json','utf8'));
+config.main=resolve('dist/server/index.js');
+if(config.assets)config.assets.directory=resolve('dist/client');
+config.d1_databases=config.d1_databases.map(d=>({...d,migrations_dir:resolve('drizzle')}));
+mkdirSync('.wrangler',{recursive:true});writeFileSync('.wrangler/migrate-config.json',JSON.stringify(config));
+const result=spawnSync(process.execPath,['--import','./scripts/sites-env.mjs','./node_modules/wrangler/bin/wrangler.js','d1','migrations','apply','DB','--local','--config','.wrangler/migrate-config.json','--persist-to','.wrangler/state'],{stdio:'inherit'});
+if(result.status!==0)process.exit(result.status||1);
+console.log('Local database ready. Fill .dev.vars, then run npm run dev -- --port 5187.');

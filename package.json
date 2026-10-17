@@ -13,7 +13,10 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup": "node scripts/setup-local.mjs",
+    "test:workflow": "node scripts/smoke.mjs",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

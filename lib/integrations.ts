@@ -142,7 +142,7 @@ async function requestJson(
 ): Promise<unknown> {
   let response: Response;
   try {
-    response = await fetch(url, {...init, redirect: 'error', signal: AbortSignal.timeout(timeout)});
+    response = await fetch(url, {...init, redirect: 'manual', signal: AbortSignal.timeout(timeout)});
   } catch {
     throw new Error(`${service} request timed out or could not connect.`);
   }
