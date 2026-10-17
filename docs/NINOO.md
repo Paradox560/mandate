@@ -2,7 +2,7 @@
 
 Target project: <https://app.ninoo.ai/p/prj-87b15826d47d>.
 
-The portable Node runtime removes Mandate's dependency on ChatGPT sign-in and Cloudflare D1. The existing Sites deployment and its default npm commands remain unchanged. Ninoo deployment is not confirmed until the target project's preview and published URL have both been checked.
+The portable Node runtime removes Mandate's dependency on ChatGPT sign-in and Cloudflare D1. The existing Sites deployment and its default npm commands remain unchanged. The target Ninoo project's production preview has been verified through an external browser and API checks: six Yahoo quotes were available, PRISM blocked the guaranteed-returns request before a model call, and benign Nicrron research completed with an acknowledged trace. Native Publish remains unverified until its fixed Node 20 runtime is replaced by the pinned runtime profile below and the resulting published URL is checked.
 
 ## Build and run
 
@@ -21,6 +21,20 @@ npm run start:ninoo
 ```
 
 Both servers listen on `0.0.0.0` and the platform's `PORT` (default `3000`). `npm run build:ninoo` emits a Node server and static client into `dist/`, including `dist/standalone/server.js`. Do not run the Node and Sites builds simultaneously in the same checkout; both use `dist/`. The `:ninoo` commands select `MANDATE_RUNTIME=node` automatically. If a host starts `dist/standalone/server.js` directly, set `MANDATE_RUNTIME=node` in that host's server environment too.
+
+### Ninoo hosts with fixed Node 20
+
+Native Ninoo Publish was observed running `pnpm build` under Node 20.20.2. Enable this explicit host profile **only in the Ninoo checkout**:
+
+```sh
+node scripts/prepare-ninoo.mjs
+pnpm install --no-frozen-lockfile
+pnpm build
+```
+
+Preparation is idempotent. It changes that checkout's default `dev`, `build`, and `start` scripts to use `scripts/ninoo-host.mjs`, adds the exact production dependency `node@22.23.3`, and adds `node` to `pnpm.onlyBuiltDependencies` so pnpm 10 permits its runtime installer. Existing pnpm settings are retained; an explicit `node` entry in `ignoredBuiltDependencies` is removed. Keep the updated lockfile with the deployment. Source checkouts that have not run preparation retain their original Sites commands. The host wrapper runs the installed Node binary, preserving `PORT` and forwarding stop signals, and loads `.env.ninoo.local` only if present. It never prints environment values or downloads Node at startup. If the pinned binary is unavailable, an already compatible native Node can run; Node 20 receives a setup error requiring dependency installation.
+
+Private `.env.ninoo.local` files must remain outside Git and public downloads. Prefer server environment controls when the host provides them. Do not rely on a manually installed `/tmp/node22` binary: it may disappear between preview, publish and container restarts. Native Publish must install production dependencies with package install scripts enabled for the pinned binary to be available.
 
 ## Ninoo project setup
 
@@ -52,4 +66,4 @@ The portable session is for demonstrations, not durable user accounts. Expiring 
 
 Open the published address in a fresh browser session. Confirm that the workspace opens without ChatGPT authentication; research and Risk Lab keep API keys server-side; paper orders use Yahoo data; and an explicitly queued order persists after restarting the server. Recheck provider configuration and PRISM receipts in the new deployment rather than assuming they migrated with source code.
 
-The current task could inspect Ninoo's public pages but could not authenticate to the private Builder project: browser automation was unavailable, and no public Builder deployment API was documented. A Nicrron inference API key alone does not establish Builder access. No remote deployment or project mutation has been claimed on that basis.
+Ninoo Builder access was established through a fresh browser and the owner's manual login. Source and private environment configuration were applied through the project's native controls. Preview success is separate from Native Publish success: the latter initially failed under Node 20, and pnpm 10 initially skipped the pinned Node package's installer. The explicit host profile addresses both requirements without relying on a temporary Node binary or changing the default Sites profile in source control.
