@@ -71,7 +71,7 @@ export default function AccessPage() {
     <div style={{color: '#087f76', fontWeight: 650, marginBottom: 28}}>mandate.</div>
     <h1 style={titleStyle}>Your paper investment desk.</h1>
     <p style={descriptionStyle}>{mode === 'code' ? 'Enter the demo access code supplied by your host.' : 'Open your own paper workspace to explore research and permissions.'} Each browser gets a separate account. No brokerage is connected.</p>
-    {mode === 'code' && <label style={{display: 'grid', gap: 8, fontSize: 13}}>Demo access code<input autoComplete="current-password" type="password" value={code} onChange={event => setCode(event.target.value)} required minLength={12} maxLength={128} style={{border: '1px solid #cdd8d8', borderRadius: 10, padding: 13, fontSize: 16}} /></label>}
+    {mode === 'code' && <label style={{display: 'grid', gap: 8, fontSize: 13}}>Demo access code<input autoComplete="current-password" type="password" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} required minLength={4} maxLength={128} pattern="[0-9]{4}|.{12,128}" title="Enter the four-digit demo code or the longer access code supplied by your host." style={{border: '1px solid #cdd8d8', borderRadius: 10, padding: 13, fontSize: 16}} /></label>}
     {error && <p role="alert" style={{fontSize: 13, color: '#a13846', lineHeight: 1.6, marginTop: 18}}>{error}</p>}
     {!ready && error && <button type="button" onClick={() => {setError(''); setAttempt(value => value + 1);}} style={{marginTop: 12, color: '#007e76', fontSize: 14, textDecoration: 'underline'}}>Retry connection</button>}
     <button disabled={!ready || busy} type="submit" style={{...buttonStyle, opacity: !ready || busy ? 0.55 : 1}}>{busy ? 'Opening workspace…' : 'Open workspace'}</button>

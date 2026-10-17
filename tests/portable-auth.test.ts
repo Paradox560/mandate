@@ -26,16 +26,31 @@ test('portable login throttle reserves concurrent checks and releases successful
   assert.equal(limiter.reserve(1004),null);
   assert.ok(limiter.reserve(61_000));
 });
-test('portable access code configuration matches the form length limits',t=>{
+test('portable access code configuration accepts four ASCII digits or a 12–128 character code',t=>{
   const keys=['MANDATE_SESSION_SECRET','MANDATE_ACCESS_MODE','MANDATE_ACCESS_CODE'];
   const original=keys.map(key=>[key,process.env[key]] as const);
   t.after(()=>{for(const [key,value] of original){if(value===undefined)delete process.env[key];else process.env[key]=value;}});
   process.env.MANDATE_SESSION_SECRET=config.secret;
   process.env.MANDATE_ACCESS_MODE='code';
-  process.env.MANDATE_ACCESS_CODE='x'.repeat(129);
-  assert.throws(()=>portableAuthConfig(),/between 12 and 128/);
-  process.env.MANDATE_ACCESS_CODE='x'.repeat(128);
-  assert.equal(portableAuthConfig().accessCode?.length,128);
+  for(const value of ['0000','0042','4096','9999','x'.repeat(12),'x'.repeat(128)]){
+    process.env.MANDATE_ACCESS_CODE=value;
+    assert.equal(portableAuthConfig().accessCode,value);
+  }
+  for(const value of ['','123','12345','abcd','12ab','１２３４','١٢٣٤','1234\n','1234 ',' 1234','x'.repeat(11),'x'.repeat(129)]){
+    process.env.MANDATE_ACCESS_CODE=value;
+    assert.throws(()=>portableAuthConfig(),/exactly four digits.*between 12 and 128/);
+  }
+  process.env.MANDATE_ACCESS_CODE='0042';
+  process.env.MANDATE_SESSION_SECRET='x'.repeat(31);
+  assert.throws(()=>portableAuthConfig(),/MANDATE_SESSION_SECRET.*at least 32/);
+  process.env.MANDATE_SESSION_SECRET='x'.repeat(32);
+  assert.equal(portableAuthConfig().secret.length,32);
+});
+test('four-digit access codes match exactly and preserve leading zeros',async()=>{
+  assert.equal(await checkAccessCode('0042','0042'),true);
+  for(const input of ['42','042','00042','0043','0042 ',' 0042','0042\n','００４２']){
+    assert.equal(await checkAccessCode(input,'0042'),false);
+  }
 });
 test('access code checks do not accept partial matches and return paths stay in the app',async()=>{
   assert.equal(await checkAccessCode('test-access-code','test-access-code'),true);

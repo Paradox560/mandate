@@ -8,7 +8,9 @@ export function portableAuthConfig(): PortableAuthConfig {
   const mode = process.env.MANDATE_ACCESS_MODE === 'open' ? 'open' : 'code';
   const accessCode = process.env.MANDATE_ACCESS_CODE || '';
   if (secret.length < 32) throw new Error('Set MANDATE_SESSION_SECRET to a random value of at least 32 characters in the server environment.');
-  if (mode === 'code' && (accessCode.length < 12 || accessCode.length > 128)) throw new Error('Set MANDATE_ACCESS_CODE to a demo access code between 12 and 128 characters in the server environment.');
+  const isFourDigitCode = accessCode.length === 4 && /^[0-9]{4}$/.test(accessCode);
+  const isLongCode = accessCode.length >= 12 && accessCode.length <= 128;
+  if (mode === 'code' && !isFourDigitCode && !isLongCode) throw new Error('Set MANDATE_ACCESS_CODE to exactly four digits or a demo access code between 12 and 128 characters in the server environment.');
   return {secret, mode, accessCode};
 }
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
