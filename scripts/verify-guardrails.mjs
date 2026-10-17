@@ -1,27 +1,8 @@
 import assert from 'node:assert/strict';
-
-const base = process.env.MANDATE_URL || 'http://127.0.0.1:5187';
-const initial = await (await fetch(`${base}/api/desk?marketMode=replay`)).json();
-assert.equal(initial.connections?.prism.enforce, true, 'Enable PRISM_ENFORCE before testing the remote block.');
-const receipts = [];
-for (let run = 1; run <= 3; run++) {
-  const before = await (await fetch(`${base}/api/desk?marketMode=replay`)).json();
-  const response = await fetch(`${base}/api/action`, {
-    method: 'POST', headers: {'Content-Type': 'application/json', Origin: base},
-    body: JSON.stringify({action: 'scenario', scenario: 'oversize', marketMode: 'replay'}),
-  });
-  const result = await response.json();
-  assert.ok(response.ok, result.error || 'Blocked-run request failed.');
-  const order = result.snapshot.state.orders[0];
-  const verdict = order.checks.find(check => check.key === 'prism');
-  assert.equal(order.status, 'blocked');
-  assert.equal(verdict?.passed, false);
-  assert.match(verdict.reason, /PRISM blocked the action/);
-  assert.equal(result.snapshot.state.portfolioVersion, before.state.portfolioVersion);
-  const event = result.snapshot.state.audit.find(entry => entry.orderId === order.id);
-  assert.equal(event.details.executionAttempted, false);
-  assert.equal(event.details.blockHonored, true);
-  receipts.push({run, traceId: event.traceId, orderId: order.id, ledgerRevision: result.snapshot.state.portfolioVersion, verdict: verdict.reason});
-}
-console.log(JSON.stringify({verifiedAt: new Date().toISOString(), receipts}, null, 2));
-console.log('Three real PRISM blocks verified; no paper fills occurred. Inspect the PRISM Guardrails block checks and Intelligence cluster separately.');
+const base=(process.env.MANDATE_URL||'http://127.0.0.1:5189').replace(/\/$/,'');
+const response=await fetch(`${base}/api/desk?marketMode=yahoo&workspace=demo`);
+const before=await response.json();assert.ok(response.ok,before.error);assert.equal(before.connections.prism.enforce,true,'Enable configured PRISM enforcement first.');assert.ok(before.state.demoStartedAt,'Start the isolated demo first.');
+const research=before.state.research.find(memo=>memo.mode==='strategy'&&memo.history?.asOf===memo.history?.latestAvailableDate);assert.ok(research,'Generate current Yahoo strategy research in the demo first.');
+const quote=before.market.find(item=>item.symbol===research.symbol);assert.equal(quote?.source,'yahoo');
+const proposal=await fetch(`${base}/api/action`,{method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({action:'propose',workspace:'demo',marketMode:'yahoo',researchId:research.id,side:'buy',quantity:Math.ceil(before.state.policy.maxOrderValue/quote.price)+10})});
+const body=await proposal.json();assert.ok(proposal.ok,body.error);const order=body.snapshot.state.orders[0];assert.equal(order.status,'blocked');assert.equal(order.marketMode,'yahoo');assert.ok(order.checks.some(check=>check.key==='notional'&&!check.passed));const check=order.checks.find(check=>check.key==='prism');assert.ok(check&&!check.passed&&check.reason.startsWith('PRISM blocked'),check?.reason);assert.equal(body.snapshot.state.portfolioVersion,before.state.portfolioVersion);assert.equal(body.snapshot.state.cash,before.state.cash);assert.deepEqual(body.snapshot.state.positions,before.state.positions);console.log(JSON.stringify({result:'PASS',source:'yahoo',traceId:order.traceId,prism:check.reason,ledgerBefore:before.state.portfolioVersion,ledgerAfter:body.snapshot.state.portfolioVersion}));

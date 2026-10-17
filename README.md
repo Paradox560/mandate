@@ -2,7 +2,7 @@
 
 Evidence-linked approvals for AI-generated equity orders, built for small public-equity funds. Mandate carries a research note's sources into a proposed order, checks the investment mandate, records approval of the exact proposal and writes an auditable paper fill.
 
-**Paper trading only.** The default Yahoo Finance view uses actual provider quotes and five-minute bars, refreshes every minute and displays their market timestamps. Data can be delayed; closed markets show the last available session. Select **Synthetic replay** for the historical permission demo. Holdings, cash and cost bases are demonstration balances. Five evidence records come from three historical issuer releases with an **August 29, 2025** research date; those old sources cannot authorize current-date Yahoo orders. There is no broker connection or real-money execution. See [market data and permissions](docs/MARKET-DATA.md).
+**Paper trading only.** Yahoo Finance is the only price source for orders and quotes. The desk refreshes once a minute and displays provider timestamps. A new account has $250,000 in paper cash and no seeded holdings or orders. Historical Yahoo strategies support cited research; approval and explicit queue authorization allow pending paper orders to wait for the next eligible regular-market quote. No brokerage is connected. See [Yahoo orders, queues, and historical strategies](docs/YAHOO-QUEUE.md).
 
 For MONEY TALKS 2, Mandate's primary track is **Trust & Risk**, with **Money Intelligence** as a secondary fit. See the [three-track YC startup shortlist](docs/YC-STARTUPS.md).
 
@@ -24,11 +24,11 @@ Yahoo prices need no API key. The six company logos are already cached in `publi
 
 After changes, `npm run build` produces the Worker build. `npm start` serves that build through local Wrangler; it does not publish a deployment. The stack is React, TypeScript, Vinext, Cloudflare Workers and D1.
 
-## Present the demo
+## Present the workflow
 
-Open [the guided presentation](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) while signed in, or use **Guided demo** from the desk. The guide runs in a separate paper portfolio, with synthetic replay prices and clearly dated 2025 evidence. It walks through MSFT research, a source citation, a one-share proposal, explicit approval, a paper fill, an oversized-order block and an exportable audit record.
+Open [the guided presentation](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) while signed in, or use **Guided demo** from the desk. The guide uses an isolated paper account and the same actual Yahoo observations as the main desk. Create a historical strategy memo, inspect its source, propose one share, approve it, then execute during an eligible open session or explicitly queue it while closed. The guide shows the actual waiting state; it cannot simulate an opening or manufacture a fill.
 
-Starting or restarting the guide changes only that isolated demo. Live research uses Nicrron when configured; **Use sample demo memo** is an explicit alternative. PRISM enforcement remains active, and provider errors are shown rather than converted into successful runs. The site remains private: present from your signed-in session or screen share. Follow the [three-minute presenter script](docs/PRESENTATION.md).
+Starting or restarting the guide affects only the isolated account. The site remains private; present from your signed-in session. Follow the [presenter script](docs/PRESENTATION.md).
 
 ## Checks
 
@@ -43,16 +43,21 @@ The unit suite exercises permission boundaries and integration response handling
 
 ```sh
 npm run test:workflow
-npm run test:workflow -- --live
 npm run test:browser
 node scripts/verify-guardrails.mjs
 ```
 
-The workflow check makes real application requests, creates paper orders and retains their audit history. It checks denied execution without approval, one fill under concurrent execution attempts, blocked adversarial scenarios and cross-origin rejection. `--live` also uploads the source corpus and requests Nicrron research. Both workflow variants probe configured connections and can contact providers. Use a disposable demo workspace: this is not a read-only test. `MANDATE_URL` can select another reachable instance.
+The workflow check uses the isolated demo workspace and actual Yahoo requests. It creates strategy research, proposes and approves an order, verifies queue-and-cancel behavior when the market is closed or an actual paper fill when open, checks an oversized proposal, and proves the main desk is unchanged. It can contact configured PRISM. `MANDATE_URL` selects the local instance. This is not a read-only check.
 
-The guardrail script requires enforcement, creates three actual oversized-order runs and checks remote blocks against an unchanged ledger. Dashboard Block Check and Intelligence clustering still require inspection. Browser checks use Playwright; install its Chromium browser with `npx playwright install chromium` if needed. Check [the demo record](docs/DEMO.md) for completed and outstanding verification; a command's presence is not a passing result.
+The guardrail script requires enforcement and an existing current strategy memo in the demo. It creates one actual Yahoo-priced oversized proposal and checks the remote block against an unchanged ledger. Dashboard Block Check and Intelligence clustering still require inspection. Browser checks use Playwright; install its Chromium browser with `npx playwright install chromium` if needed. Check [the demo record](docs/DEMO.md) for completed and outstanding verification; a command's presence is not a passing result.
 
-## Recorded integration verification
+## Current verification
+
+Yahoo-only orders and strategies passed **110 unit tests**, **18 browser cases**, and TypeScript checking. A live Yahoo → strategy memo → review → approval → closed-market queue → cancellation rehearsal kept the main desk unchanged; PRISM blocked a real Yahoo-priced oversized proposal. Reopening execution is covered by controlled provider tests. See [the current verification record](docs/YAHOO-QUEUE.md).
+
+## Earlier recorded integration verification
+
+The records below describe earlier revisions, including the retired synthetic demo. They are historical verification receipts, not the current Yahoo-only workflow. See [current queue behavior](docs/YAHOO-QUEUE.md).
 
 The guided-demo update passed **79 unit tests**, **20 distinct browser cases**, and TypeScript checking. Its real Nicrron → proposal → human approval → paper fill → PRISM block rehearsal preserved the main desk. See [the presenter script and recorded rehearsal](docs/PRESENTATION.md).
 
