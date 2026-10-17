@@ -1,84 +1,74 @@
-# Demonstration and proof checklist
+# Mandate demonstration and evidence
 
-This document separates recorded build-session checks from the proof still needed for judging. Unchecked items require evidence from an actual run.
+Use the [Risk walkthrough](https://mandate-investment-desk.pranav4096.chatgpt.site/?judge=1) for MONEY TALKS 2. Mandate enters **Trust & Risk**: show the risky request, the guardrail, and the actual run it stopped. The [three-minute script](PRESENTATION.md) keeps that evidence first; [JUDGING.md](JUDGING.md) maps it to the official criteria.
 
-## Guided presentation
+The site and repository are private. Present from the owner's signed-in session and arrange judge access before relying on a link. This update does not change either audience.
 
-Use **Guided demo** or `/?demo=1` for an isolated, repeatable walkthrough. The guide exposes actual research, proposal, approval, fill and block results one step at a time. Starting over clears only the separate demo portfolio. See [the three-minute presenter script](PRESENTATION.md) for what to click, say and inspect. The manual workflow below remains available in the main paper desk.
+## Risk demonstration
 
-## Explain the clocks first
+1. Open the Risk lab and select a finance-risk case. Read the exact request before running it. The cases cover promised returns, bypassing human approval and bypassing concentration limits.
+2. Choose **Run risk check**. Inspect **PRISM gate response**, **Nicrron model calls**, **Paper ledger** and the trace ID. An evaluated block should record zero model calls and no portfolio change; a transport failure is not a successful remote block.
+3. Open the corresponding trace in PRISM. Its ID must match the guardrail evaluation. Inspect the submitted steps rather than inferring them from an integration badge.
+4. Select **Cited market analysis** and choose **Run benign analysis**. A permitting verdict should lead to an actual Nicrron response using dated Yahoo context. An error must remain visible; a deterministic note is not a model response.
+5. Export the evidence bundle. Preserve inputs, timestamps, verdicts and ledger observations. Exporting local receipts does not establish dashboard classifications.
+6. On PRISM's Guardrails page, show **Block Check**, compare its classification with actual downstream behavior, and explain whether it is correct.
+7. On PRISM's Root Cause page, show a cluster containing at least three failed or blocked runs, its cause, and an explanation of the repeated failure.
 
-The app is a paper desk. Its default Yahoo Finance view shows actual provider timestamps and five-minute bars from the latest available regular session, with a separate last-checked time. Quotes refresh every minute but can be delayed or unavailable. Closed markets show the previous session. The research corpus remains historical; current prices do not refresh its sources.
+Keep risky inputs fictional and free of personal financial details. The Risk lab does not submit orders, alter holdings or call a broker. Its benign control tests useful analysis through the same gate; it does not bypass enforcement to manufacture a success.
 
-Select **Synthetic replay** in the header (or open `/?marketMode=replay`) for the workflow below. In this mode, timestamps identify when the simulation generated a quote, not when an exchange published it. Each chart contains 96 five-minute simulated observations. Daily change is calculated against the previous synthetic UTC-day close. It is not a backtest, portfolio return or actual price history.
+## Yahoo portfolio demonstration
 
-Issuer disclosures are historical and assessed as of **August 29, 2025**. The date of a newly created report or order is the real current time; it does not refresh its sources. The seed portfolio starts with $126,579.40 cash, 100 MSFT shares, 220 NVDA shares and 140 AAPL shares. Its roughly $250,000 marked value moves with the simulation. Cost bases are illustrative bookkeeping inputs.
+The [guided desk](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) provides a separate paper account for the longer product demonstration. Its quotes and history are actual Yahoo observations.
 
-Two reports and one blocked order are clearly labeled samples. Their `seed-*` IDs identify fixtures. Their scores describe cited-claim coverage, not investment confidence or measured performance. They contain no model responses, PRISM receipts, approvals or executions.
+1. Start a session with $250,000 paper cash and no holdings. Read the market state and provider timestamp.
+2. Generate Microsoft research from the buy-and-hold historical strategy. Inspect the date range and Yahoo citation. This is a labeled deterministic calculation, separate from Nicrron inference.
+3. Open **Strategies** to compare buy-and-hold, the 20/50-day moving-average rule and 20-day momentum. Earlier dates support historical inspection; a past quote cannot authorize a current fill.
+4. Propose one MSFT share and inspect its exact Yahoo reference, evidence and mandate checks. Approve the proposal separately.
+5. If the market is closed, choose **Queue for market open**. Show the queued authorization, unchanged cash and no fill. If the market is eligible and all checks pass, execute a paper order and inspect its actual fill receipt.
+6. Show the audit record and export it. A queued request can be canceled before execution. Restarting the isolated session cancels its pending demo orders.
 
-## Product walkthrough
+Queue authorization expires after seven days and permits at most 1% drift from the approved reference. The processor rechecks the quote, mandate, evidence and ledger. Periodic processing does not promise the exchange's opening price or execution at exactly 9:30 a.m. Missing observations never become invented prices. See [the queue contract](YAHOO-QUEUE.md).
 
-1. Open the desk, select **Synthetic replay**, and identify the synthetic-market and historical-evidence labels. Read the cash balance, holdings and mandate.
-2. Open NVIDIA's sample research and follow both original issuer citations. Show the publication date, reporting period and supported claims.
-3. Run new research with configured Nicrron credentials. Inspect the returned mode and model; if the request fails, show the error or explicitly labeled sample behavior.
-4. Propose an oversized order. Show its failed notional check and confirm cash, holdings and fills did not change. The seeded order is a visual example only; create a new proposal for live proof.
-5. Submit a valid small paper proposal. Review its evidence, amount, projected concentration and authorization requirements. Approve the exact order and execute its paper fill.
-6. In a fresh test, approve an order and then change the mandate or portfolio revision before execution. The prior approval must be rejected. Record the reason and unchanged ledger.
-7. Attempt execution with a disallowed actor and attempt a second fill of an executed order. Both must leave the ledger unchanged. Show the real audit records and associated trace IDs.
+## Recorded judging evidence — October 17, 2026
 
-## Local safeguards to verify
+A controlled baseline completed 50 actual Nicrron calls from **18:38:57 to 18:40:00 UTC**. The new PRISM rule, **Mandate financial authority boundary**, was then created at **18:40:19 UTC**. A second 50-run cohort repeated the same inputs and frozen Yahoo context with that rule active, completing at **18:41:33 UTC**. [Comparison and chronology](../public/proofs/cohort-comparison.json)
 
-`evaluateOrder` checks parameter validity, bound market source, allowed symbol, quote freshness, price drift, notional, cash/inventory, concentration, source linkage and evidence age. Yahoo orders additionally require an open regular session and fresh prices for every holding. Capability authorization, approval requirements, fingerprint/version binding and duplicate-fill prevention are additional execution controls. Do not count each UI badge or repeated check as a separate integration.
+| Observed result | Baseline | Protected |
+| --- | ---: | ---: |
+| Actual runs | 50 | 50 |
+| Risky requests reaching Nicrron | 38 | 0 |
+| Risky requests blocked before Nicrron | 0 | 38 |
+| Benign analyses completed | 12 | 12 |
+| Trace submissions acknowledged | 50 | 50 |
+| Span submissions acknowledged | 50 | 50 |
+| Paper ledger changed | No | No |
 
-These are intended code behaviors to verify with the implementation's checks. A fixture with `status: blocked` does not prove any enforcement path ran. A local role name is not production authentication.
+These are **four fixed requests repeated across each cohort**, not 50 unique scenarios or a broad safety benchmark. The baseline used a read-only shadow harness that skipped only the pre-model gate and exposed no order tools. Its model safety prompt remained in place. A risky request reaching the model demonstrates the missing application boundary; it does not establish that the model produced harmful advice. Both cohorts used the same [frozen Yahoo observations](../public/proofs/yahoo-cohort-snapshot.json), identified by their recorded snapshot hash. Raw [baseline](../public/proofs/baseline-cohort.jsonl) and [protected](../public/proofs/protected-cohort.jsonl) receipts retain the inputs, outcomes and trace IDs.
 
-## Recorded checks — October 17, 2026
+PRISM's reconciliation API independently classifies **all 38 protected blocks as honoured**, with reason `no_downstream_execution`. That agrees with the actual zero model calls and absence of downstream model spans. Retrieval and ledger-read spans did not execute an order. This is verified API readback, not a captured PRISM dashboard presentation. [Block Check evidence](../public/proofs/block-check.json)
 
-The subsequent Yahoo/logos update passed **68 unit tests** and **16 browser tests in 44.2 seconds**, including real PRISM-enforced replay execution and an oversized-order block. Three new read-only browser cases use mocked market responses to verify dated bars, six decoded company images, missing prices and source-switch races. Current Yahoo prices were separately read from the provider; Saturday observations carry Friday October 16 market timestamps. See [market-data behavior and limits](MARKET-DATA.md).
+PRISM's completed Root Cause job produced two clusters. The relevant cluster, `e2e3b648-f936-4afd-92fd-71789e54d6f9`, contains **53 members** and reports cause `prompt`, evidence tier `needs_review`, and judge status `credential_error`. Its heuristics combine failed-tool, termination and unsupported-answer signals; intentional guardrail stops can also trigger these signals. Treat the cause as a tentative classification requiring review, not a confirmed prompt defect or remediation diagnosis. [Cluster details](evidence/root-cause-e2e3b648-f936-4afd-92fd-71789e54d6f9.json), [completed job](evidence/cluster-status.json)
 
-- **47 unit tests passed**, TypeScript checking passed, and the Desktop production build/setup passed.
-- **7 Playwright tests passed in 30.2 seconds**, including a real PRISM-enforced MSFT buy-one proposal, approval and execution with exactly one fill, plus an oversized order denied without changing the ledger.
-- Live Nicrron and PRISM provider calls were verified. The rule **Mandate blocked order** returned an evaluated block for an oversized-order scenario with enforcement enabled; portfolio revision **2** remained unchanged. Trace: `80288ef5-24af-49be-a081-aa7db80cd4ba`.
+Six current protected-cohort blocks were independently matched to that cluster through PRISM trajectory details, exact caller trace IDs and session IDs. The matches cover all three risky request types. Examples are `d0583824-1964-49c9-a41c-f1e40050da5f` (approval bypass), `22bc5240-6ffc-4465-bcd4-5e32159696ad` (guaranteed returns) and `cbfecd6f-523c-45e5-bde1-b6609b16d2e8` (concentration override). The matched runs share disallowed financial requests; the gate stopped them before Nicrron, while PRISM represents the denied gate as a failed tool step. [Verified membership and receipts](evidence/root-cause-current-members.json)
 
-The subsequent interface-refinement run passed **12 browser checks in 38.8 seconds**, **47 unit tests**, ESLint and TypeScript checking. Its screenshot coverage and final targeted checks are recorded in [UI-REFINEMENT.md](UI-REFINEMENT.md). The initial seven-test result above remains the historical provider/workflow check.
+The ten selected deep analyses finished with zero successes and ten failures. PRISM's trace detail reports an upstream Anthropic `401` with `invalid x-api-key`, separate from functioning Nicrron inference and PRISM guardrails. A cluster was nevertheless generated from trajectory evidence. This does not repair the upstream analysis or establish an AI-confirmed cause. The actual PRISM dashboard presentation remains to be captured. [Analysis outcome](evidence/analysis-status.json), [provider error](../public/proofs/analysis-provider-error.json)
 
-These are build-session results reported by the implementation and browser verification tasks. They are not continuous monitoring or proof of the remaining PRISM dashboard criteria. Repeat local checks using README.md. `node scripts/verify-guardrails.mjs` generates three real oversize scenarios with enforcement required and asserts a remote block and unchanged ledger; its presence does not establish that PRISM grouped those runs.
+The actual app was also exercised for all three blocked cases and a benign Nicrron analysis. Captured screens show the [final Risk lab](evidence/risk-lab-final-desktop.png), [approval-bypass block](evidence/risk-lab-bypass-approval.png), [concentration block](evidence/risk-lab-concentration-breach.png), [benign analysis](evidence/risk-lab-sourced-analysis.png), [cohort comparison](evidence/cohort-comparison.png) and [PRISM API proof readback](evidence/prism-proof-readback.png). These are Mandate screens, not PRISM dashboard screenshots. The [portable Root Cause artifact](../public/proofs/root-cause.json) contains the actual cluster and six member joins. A recorded benign run is `6fa7759b-39f7-4dff-a42e-a5489a16add2`.
 
-Three further real enforced blocks were recorded by `scripts/verify-guardrails.mjs` with an unchanged ledger: `0d83e43e-b403-45e8-a1a4-6ebb70eafbf2`, `8df6c6aa-da8b-4997-b9ed-94766828549e`, and `694c615b-4f66-4845-b9fc-19bd2e81cd94`. Local receipts are in the ignored `outputs/guardrail-proof.json.txt`. Their Block Check classifications and Intelligence grouping still need dashboard inspection.
+Current checks passed **130 unit tests**, **23 browser cases**, TypeScript checking and a production build. The earlier Yahoo-only revision covered a live strategy → proposal → approval → closed-market queue → cancellation rehearsal. Reopening used controlled provider fixtures; Saturday verification did not observe an actual market reopening. [Earlier queue verification](YAHOO-QUEUE.md)
 
-## Required event proofs
+Earlier development receipts include PRISM block `80288ef5-24af-49be-a081-aa7db80cd4ba` and three further blocks: `0d83e43e-b403-45e8-a1a4-6ebb70eafbf2`, `8df6c6aa-da8b-4997-b9ed-94766828549e`, and `694c615b-4f66-4845-b9fc-19bd2e81cd94`. These belong to the retired synthetic-price revision. They establish historical integration behavior, not current Yahoo fills, pre-model Risk lab behavior, dashboard Block Check or a Root Cause cluster.
 
-The [MONEY TALKS 2 brief](https://docs.google.com/document/d/1rm5ev9mj_leu2w7OVlFVmKaCT-OvZZ9tSibbC4lzd08/edit?tab=t.0) requires PRISM and NicrronNinoo for every team, with **50+ actual runs before fixing** to supply analysis. Track-specific proofs differ. Mandate's primary track is **Trust & Risk**; cited research gives it a secondary **Money Intelligence** fit.
+## Remaining submission evidence
 
-Common evidence:
+| Required artifact | Recorded status |
+| --- | --- |
+| Current finance-risk guardrail blocking before a model call, with matching trace | Verified: 38 actual cohort blocks and live app receipts |
+| PRISM Block Check classification and correctness assessment | API verified: all 38 honoured; dashboard screenshot or presentation still needed |
+| Root Cause cluster containing at least three failed or blocked runs | Actual 53-member cluster with six verified current blocked members; cause needs review and dashboard presentation remains outstanding |
+| At least 50 actual runs before remediation | Verified controlled baseline before new rule creation; four repeated inputs, not production traffic |
+| Current benign Nicrron control | Verified: 12 protected cohort completions and actual app analysis |
+| Current complete browser rerun and production build | All 23 browser cases and production build passed |
+| Team names, roles and judge access | Human details and access arrangements remain outstanding |
 
-- [x] Make actual provider requests through Nicrron and PRISM.
-- [ ] Retain 50+ actual agent runs before remediation, including inputs, version, evidence/quote snapshot and result. Seed records and copied rows do not count.
-
-Trust & Risk — all three required:
-
-- [x] Configure a custom finance guardrail in enforce mode and show it blocking a real run. The verified oversized-order trace is recorded above.
-- [ ] Open the Guardrails page and show **Block Check**: honoured, not honoured or unverifiable. Compare PRISM's classification with the actual downstream ledger result and explain whether it is correct. A local no-fill assertion does not replace this dashboard check.
-- [ ] Show an **Intelligence cluster of at least three failed or blocked runs**, its stated cause and an explanation. Three API blocks alone do not establish a cluster.
-
-Money Intelligence — additional proofs if entering this track:
-
-- [ ] Upload the historical issuer corpus to the PRISM Knowledge Base, assign it to the agent and show a run whose retrieval step actually uses it.
-- [ ] Show an Intelligence cluster of at least three failed runs and explain its cause.
-- [ ] Create a custom evaluator and show v1 and v2 scores on the **same inputs and frozen snapshots**. A suggested rubric checks that every factual claim resolves to a retrieved source and that a proposal's symbol matches its evidence.
-
-Money Operations — requirements for a separate operations entry, not extra Trust & Risk requirements:
-
-- [ ] Show one session's Steps tab with six or more actual tool calls.
-- [ ] Configure an alert and show it firing on a real run.
-- [ ] Show a three-or-more failure cluster, explain its cause and demonstrate v2 no longer failing on the same inputs.
-
-The [PRISM documentation](https://blockconvey.com/docs) establishes platform contracts. An adapter, test suite or this document does not establish a dashboard evaluator, alert, cluster or remediation result.
-
-## Evidence corpus
-
-- [Apple fiscal Q3 2025 release](https://www.apple.com/newsroom/2025/07/apple-reports-third-quarter-results/) — published July 31, 2025; quarter ended June 28, 2025.
-- [Microsoft fiscal Q4 2025 release](https://www.microsoft.com/en-us/Investor/earnings/FY-2025-Q4/press-release-webcast) — published July 30, 2025; quarter and fiscal year ended June 30, 2025.
-- [NVIDIA fiscal Q2 2026 release](https://investor.nvidia.com/news/press-release-details/2025/NVIDIA-Announces-Financial-Results-for-Second-Quarter-Fiscal-2026/default.aspx) — published August 27, 2025; quarter ended July 27, 2025.
-
-There are five evidence records from three issuer documents. GOOGL, AMZN and META have synthetic quotes but no seeded research evidence; do not fabricate citations for them.
+Record the commit, run IDs, timestamps and dashboard artifacts when updating this table. Seeded records, copied rows and browser mocks do not count as provider runs. A successful trace upload does not establish a block, a dashboard verification or a cluster.

@@ -4,7 +4,7 @@ Evidence-linked approvals for AI-generated equity orders, built for small public
 
 **Paper trading only.** Yahoo Finance is the only price source for orders and quotes. The desk refreshes once a minute and displays provider timestamps. A new account has $250,000 in paper cash and no seeded holdings or orders. Historical Yahoo strategies support cited research; approval and explicit queue authorization allow pending paper orders to wait for the next eligible regular-market quote. No brokerage is connected. See [Yahoo orders, queues, and historical strategies](docs/YAHOO-QUEUE.md).
 
-For MONEY TALKS 2, Mandate's primary track is **Trust & Risk**, with **Money Intelligence** as a secondary fit. See the [three-track YC startup shortlist](docs/YC-STARTUPS.md).
+For MONEY TALKS 2, Mandate enters **Trust & Risk**: **a cited answer is not permission to trade**. The Risk Lab evaluates real financial requests in PRISM before Nicrron runs, records the same trace ID, and reads back the paper ledger. See the [official judging map](docs/JUDGING.md) and [submission draft](docs/SUBMISSION.md).
 
 ## Run locally
 
@@ -25,6 +25,8 @@ Yahoo prices need no API key. The six company logos are already cached in `publi
 After changes, `npm run build` produces the Worker build. `npm start` serves that build through local Wrangler; it does not publish a deployment. The stack is React, TypeScript, Vinext, Cloudflare Workers and D1.
 
 ## Present the workflow
+
+Start with the [judge walkthrough](https://mandate-investment-desk.pranav4096.chatgpt.site/?judge=1). Run a guaranteed-return or approval-bypass request, inspect the gate, model-call count, source snapshot and unchanged ledger, then run the permitted cited-analysis case. Risk Lab stores the actual receipts and exports JSON. PRISM Block Check and Root Cause are separate provider evidence; their recorded status never follows from a local test alone.
 
 Open [the guided presentation](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) while signed in, or use **Guided demo** from the desk. The guide uses an isolated paper account and the same actual Yahoo observations as the main desk. Create a historical strategy memo, inspect its source, propose one share, approve it, then execute during an eligible open session or explicitly queue it while closed. The guide shows the actual waiting state; it cannot simulate an opening or manufacture a fill.
 
@@ -49,11 +51,17 @@ node scripts/verify-guardrails.mjs
 
 The workflow check uses the isolated demo workspace and actual Yahoo requests. It creates strategy research, proposes and approves an order, verifies queue-and-cancel behavior when the market is closed or an actual paper fill when open, checks an oversized proposal, and proves the main desk is unchanged. It can contact configured PRISM. `MANDATE_URL` selects the local instance. This is not a read-only check.
 
-The guardrail script requires enforcement and an existing current strategy memo in the demo. It creates one actual Yahoo-priced oversized proposal and checks the remote block against an unchanged ledger. Dashboard Block Check and Intelligence clustering still require inspection. Browser checks use Playwright; install its Chromium browser with `npx playwright install chromium` if needed. Check [the demo record](docs/DEMO.md) for completed and outstanding verification; a command's presence is not a passing result.
+The guardrail script requires enforcement and an existing current strategy memo in the demo. It creates one actual Yahoo-priced oversized proposal and checks the remote block against an unchanged ledger. Use Risk Lab and the recorded evidence packet for the current pre-model gate, Block Check and Root Cause proof status. Browser checks use Playwright; install its Chromium browser with `npx playwright install chromium` if needed. Check [the demo record](docs/DEMO.md) for completed and outstanding verification; a command's presence is not a passing result.
 
 ## Current verification
 
-Yahoo-only orders and strategies passed **110 unit tests**, **18 browser cases**, and TypeScript checking. A live Yahoo → strategy memo → review → approval → closed-market queue → cancellation rehearsal kept the main desk unchanged; PRISM blocked a real Yahoo-priced oversized proposal. Reopening execution is covered by controlled provider tests. See [the current verification record](docs/YAHOO-QUEUE.md).
+The judging update passed **130 unit tests**, **23 browser cases**, TypeScript checking and a production build. Actual browser runs verified two financial blocks with zero model calls and a permitted Nicrron analysis with one call, all with an unchanged paper ledger. Ordinary research and connection diagnostics also enforce PRISM before inference when enabled.
+
+A controlled 50-run shadow baseline completed before the finance rule was created; 50 protected requests replayed the same Yahoo snapshot. Four fixed inputs were repeated: 38 risky requests and 12 benign controls per cohort. Risky requests reaching the model fell from 38 to zero; all 12 protected benign requests completed. All 100 traces and span batches were acknowledged. This measures the defined permission boundary, not general model safety or investment performance. [Raw comparison](public/proofs/cohort-comparison.json)
+
+PRISM independently classified all 38 blocked cohort runs as **honoured**. Its deeper analysis reported an upstream AI credential error; the Root Cause evidence records the provider's actual cluster and limitations rather than treating its tentative diagnosis as confirmed. See [the evidence record](docs/DEMO.md).
+
+The Yahoo-only trading checks remain covered: fresh observations, historical strategies, human approval, bounded closed-market queues, expiry and duplicate-fill protection. An actual reopening was not observed during Saturday testing. See [the queue verification record](docs/YAHOO-QUEUE.md).
 
 ## Earlier recorded integration verification
 
@@ -69,6 +77,8 @@ The permission layer checks quantity and side, symbol allowlist, quote freshness
 
 ## Project notes
 
+- [Judging criteria and exact requirements](docs/JUDGING.md)
+- [Devpost submission draft](docs/SUBMISSION.md)
 - [Product and confirmed initial customer](PRODUCT.md)
 - [YC startup shortlist for all three tracks](docs/YC-STARTUPS.md)
 - [YC thesis: Hudson Labs research + Alter permissions](docs/YC-THESIS.md)
