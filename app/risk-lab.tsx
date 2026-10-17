@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown, Clock3, Copy, Download, ExternalLink, FileCheck2, Fingerprint, Loader2, LockKeyhole, Play, RefreshCw, ShieldCheck, ShieldX, Sparkles, XCircle } from 'lucide-react';
 import { RISK_CASES, type ExternalRiskProof, type RiskCaseId, type RiskLabSnapshot, type RiskRun, type RiskCohortProof } from '../lib/risk-lab-types';
 import type { WorkspaceMode } from '../lib/types';
+import { authenticationRecovery, type AuthRecovery } from '../lib/client-auth';
 import './risk-lab.css';
 
 const usd = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
@@ -49,6 +50,7 @@ export function RiskLab({ workspace, onOpenDesk }: { workspace: WorkspaceMode; o
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
+  const [authRecovery, setAuthRecovery] = useState<AuthRecovery | null>(null);
   const [notice, setNotice] = useState('');
   const [revision, setRevision] = useState(0);
   const [showAllRuns, setShowAllRuns] = useState(false);
@@ -60,6 +62,11 @@ export function RiskLab({ workspace, onOpenDesk }: { workspace: WorkspaceMode; o
       try {
         const response = await fetch(`/api/risk-lab?workspace=${workspace}`, { cache: 'no-store', signal: controller.signal });
         const next = await response.json() as RiskLabSnapshot & { error?: string };
+        if (id === requestId.current) {
+          const recovery = authenticationRecovery(response.status, next, window.location.pathname + window.location.search + window.location.hash);
+          setAuthRecovery(recovery);
+          if (recovery?.portable) window.location.assign(recovery.href);
+        }
         if (!response.ok) throw new Error(next.error || 'The risk run records could not be loaded.');
         if (id === requestId.current) { setSnapshot(next); setSelectedRunId(next.runs[0]?.id || ''); }
       } catch (error) { if (!controller.signal.aborted && id === requestId.current) setError(error instanceof Error ? error.message : 'The risk run records could not be loaded.'); }
@@ -79,6 +86,11 @@ export function RiskLab({ workspace, onOpenDesk }: { workspace: WorkspaceMode; o
       const response = await fetch('/api/risk-lab', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId, workspace }) });
       const result = await response.json() as { run?: RiskRun; snapshot?: RiskLabSnapshot; error?: string };
       if (id !== requestId.current) return;
+      const recovery = authenticationRecovery(response.status, result, window.location.pathname + window.location.search + window.location.hash);
+      if (recovery) {
+        setAuthRecovery(recovery); setSnapshot(null);
+        if (recovery.portable) window.location.assign(recovery.href);
+      }
       if (result.snapshot) setSnapshot(result.snapshot);
       if (result.run) { setSelectedRunId(result.run.id); setNotice(`Run recorded. ${outcomeLabel(result.run)}.`); }
       if (!response.ok || result.error) throw new Error(result.error || 'The check could not complete. Inspect any recorded receipt before retrying.');
@@ -95,7 +107,7 @@ export function RiskLab({ workspace, onOpenDesk }: { workspace: WorkspaceMode; o
   return <div className="risk-lab" data-testid="risk-lab" aria-busy={running}>
     <div className="risk-lab-intro"><div><span className="risk-lab-eyebrow"><ShieldCheck size={15} />Trust & Risk</span><p>Small investment teams need to know when an agent should stop. Send a risky research request through PRISM, inspect whether a model was called, and compare the ledger before and after.</p></div><button className="button secondary" type="button" onClick={onOpenDesk}>Open investment desk<ArrowUpRight size={14} /></button></div>
     <ol className="risk-boundaries" aria-label="Permission boundaries"><li><div className="risk-boundary-title"><span>01</span><strong>Risk gate</strong></div><p>PRISM checks the request before model generation.</p><small>Block or permit inference</small></li><li><div className="risk-boundary-title"><span>02</span><strong>Research agent</strong></div><p>Nicrron reasons over dated Yahoo observations.</p><small>Read + cite sources</small></li><li><div className="risk-boundary-title"><span>03</span><strong>Human reviewer</strong></div><p>A reviewer authorizes the exact proposed order.</p><small>Approve within the mandate</small></li><li><div className="risk-boundary-title"><span>04</span><strong>Execution gateway</strong></div><p>Fresh quotes and permissions precede a paper fill.</p><small>Recheck + record</small></li></ol>
-    {error && <div className="risk-error" role="alert"><XCircle size={17} /><p>{error}</p>{!snapshot && <button className="text-button" type="button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={14} />Retry</button>}</div>}
+    {error && <div className="risk-error" role="alert"><XCircle size={17} /><p>{error}</p>{authRecovery ? <a className="text-button" href={authRecovery.href} target="_top">{authRecovery.label}<ArrowUpRight size={14} /></a> : !snapshot && <button className="text-button" type="button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={14} />Retry</button>}</div>}
     {loading ? <div className="risk-lab-loading" role="status"><Loader2 size={21} className="spin" />Loading recorded risk checks…</div> : snapshot && <>
       <section className="risk-workbench" aria-labelledby="risk-case-title"><aside className="risk-cases"><span className="risk-section-label">1. Choose a request</span>{snapshot.cases.map(item => <button className="risk-case" type="button" key={item.id} aria-pressed={caseId === item.id} disabled={running} onClick={() => { setCaseId(item.id); setError(''); setNotice(''); }}><span>{item.expectedOutcome === 'blocked' ? <ShieldX size={16} /> : <BookOpen size={16} />}{item.label}</span><small>{item.expectedOutcome === 'blocked' ? 'Expected: block before inference' : 'Expected: sourced analysis'}</small></button>)}<p className="risk-case-note">These are predefined evaluation requests. Every run records its actual outcome; the expected outcome is not a result.</p></aside><div className="risk-case-body"><div className="risk-case-heading"><span className="risk-section-label">2. Run the gate</span><span className="risk-section-label"><LockKeyhole size={12} />No order execution</span></div><h2 id="risk-case-title">{activeCase.label}</h2><p className="risk-case-description">{activeCase.description}</p><blockquote className="risk-input"><span>Exact request sent to the gate</span><p>{activeCase.input}</p></blockquote><div className="risk-run-actions"><button className="button primary" type="button" disabled={running} onClick={() => void runCase()}>{running ? <Loader2 size={15} className="spin" /> : <Play size={15} />}{running ? 'Running the check…' : activeCase.expectedOutcome === 'allowed' ? 'Run benign analysis' : 'Run risk check'}</button><span>{running ? 'Waiting for actual provider responses and the ledger receipt.' : 'Uses a frozen snapshot of real Yahoo data. Prices may be delayed; no synthetic prices are substituted.'}</span></div><div className="risk-readiness"><span className={!snapshot.integration.prismConfigured ? 'risk-not-ready' : ''}>{snapshot.integration.prismConfigured ? <Check size={12} /> : <Clock3 size={12} />}PRISM {snapshot.integration.prismConfigured ? 'configured' : 'not configured'}</span><span className={!snapshot.integration.enforce ? 'risk-not-ready' : ''}>{snapshot.integration.enforce ? <Check size={12} /> : <Clock3 size={12} />}Enforcement {snapshot.integration.enforce ? 'enabled' : 'disabled'}</span><span className={!snapshot.integration.nicrronConfigured ? 'risk-not-ready' : ''}>{snapshot.integration.nicrronConfigured ? <Check size={12} /> : <Clock3 size={12} />}Nicrron {snapshot.integration.nicrronConfigured ? 'configured' : 'not configured'}</span></div></div></section>
       <p className="risk-lab-announcement" role="status">{notice || `${snapshot.totalRuns} recorded ${snapshot.totalRuns === 1 ? 'run' : 'runs'} in this ${workspace === 'demo' ? 'demo' : 'desk'} workspace. Select a request to capture a new receipt.`}</p>

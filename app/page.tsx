@@ -13,6 +13,7 @@ import { usePanelMotion } from './use-panel-motion';
 import { DemoGuide } from './demo-guide';
 import { Strategies } from './strategies';
 import { RiskLab } from './risk-lab';
+import { authenticationRecovery, type AuthRecovery } from '../lib/client-auth';
 import './strategies.css';
 import type { Action, AuditEvent, DeskSnapshot, Evidence, Order, Policy, Quote, Research, MarketMode } from '../lib/types';
 
@@ -192,6 +193,7 @@ export default function Home() {
   const busyRef = useRef(false);
   const mutationVersion = useRef(0);
   const [loadError, setLoadError] = useState('');
+  const [authRecovery, setAuthRecovery] = useState<AuthRecovery | null>(null);
   const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
@@ -205,6 +207,13 @@ export default function Home() {
   const [expandedEvent, setExpandedEvent] = useState('');
   const [tableMode, setTableMode] = useState<'watchlist' | 'positions'>('watchlist');
   const [resetConfirm, setResetConfirm] = useState(false);
+  const recoverAuthentication = useCallback((status: number, body: unknown) => {
+    const recovery = authenticationRecovery(status, body, window.location.pathname + window.location.search + window.location.hash);
+    if (!recovery) return;
+    setAuthRecovery(recovery); setSnapshot(null);
+    setLoadError(recovery.portable ? 'Open a session to continue in your paper workspace.' : 'Sign in with ChatGPT to continue in your workspace.');
+    if (recovery.portable) window.location.assign(recovery.href);
+  }, []);
   const changeMarketMode = useCallback((mode: MarketMode) => {
     marketModeRef.current = mode;
     mutationVersion.current += 1;
@@ -233,10 +242,11 @@ export default function Home() {
     try {
       const response = await fetch(`/api/desk?marketMode=${mode}&workspace=${workspace}`, { cache: 'no-store' });
       const result = await response.json() as DeskSnapshot & { error?: string };
+      if (isCurrent()) recoverAuthentication(response.status, result);
       if (!response.ok) throw new Error(result.error || 'Unable to load the investment desk.');
-      if (isCurrent()) { setSnapshot(result); setLoadError(''); }
+      if (isCurrent()) { setSnapshot(result); setLoadError(''); setAuthRecovery(null); }
     } catch (err) { if (isCurrent()) setLoadError(err instanceof Error ? err.message : 'Unable to connect. Please try again.'); }
-  }, []);
+  }, [recoverAuthentication]);
   useEffect(() => {
     if (!marketMode) return;
     const initial = setTimeout(() => void refresh(), 0);
@@ -273,6 +283,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...action, marketMode: mode, workspace }) });
       const result = await response.json() as { snapshot?: DeskSnapshot; message?: string; error?: string };
+      recoverAuthentication(response.status, result);
       if (result.snapshot && workspace === workspaceModeRef.current && mode === marketModeRef.current) setSnapshot(result.snapshot);
       if (!response.ok || result.error) throw new Error(result.error || 'The action could not be completed.');
       setToast({ message: result.message || 'Your desk is up to date.', error: false });
@@ -283,7 +294,7 @@ export default function Home() {
       if (action.action === 'start_demo') { setOrderId(''); setResearchId(''); setSymbol('MSFT'); setView('Research'); setAuditQuery(''); setAuditFilter('all'); setExpandedEvent(''); }
     } catch (err) { setToast({ message: err instanceof Error ? err.message : 'Something went wrong. Please try again.', error: true }); }
     finally { busyRef.current = false; setBusy(''); if (mode !== marketModeRef.current) void refresh(); }
-  }, [refresh]);
+  }, [refresh, recoverAuthentication]);
   const queuedCount = snapshot?.state.orders.filter(order => order.status === 'queued').length || 0;
   useEffect(() => {
     if (!queuedCount) return;
@@ -302,11 +313,12 @@ export default function Home() {
     try {
       const response = await fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'process_queue', marketMode: 'yahoo', workspace }) });
       const result = await response.json() as { snapshot?: DeskSnapshot; error?: string };
+      recoverAuthentication(response.status, result);
       if (result.snapshot && workspace === workspaceModeRef.current && version === mutationVersion.current) setSnapshot(result.snapshot);
       if (!response.ok) throw new Error(result.error || 'The queued-order check could not complete.');
     } catch (error) { setToast({ message: error instanceof Error ? error.message : 'The queued-order check could not complete.', error: true }); }
     finally { busyRef.current = false; setBusy(''); }
-  }, [queuedCount]);
+  }, [queuedCount, recoverAuthentication]);
   useEffect(() => {
     if (!queuedCount) return;
     const interval = setInterval(() => void processQueued(), 60000);
@@ -347,11 +359,11 @@ export default function Home() {
     <div className="main-shell" inert={Boolean(evidence) || (isMobile && mobileNav)}><header className="topbar"><div className="breadcrumb"><button type="button" className="icon-button mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation" aria-controls="workspace-navigation" aria-expanded={mobileNav}><span className={`menu-glyph ${mobileNav ? 'open' : ''}`} aria-hidden="true"><i /><i /></span></button><span>Workspace</span><ChevronRight size={13} /><strong>{view}</strong></div><div className="topbar-right"><span className="market-provider"><span className="status-dot" />Yahoo Finance</span><button type="button" className={`icon-button ${busy ? 'muted' : ''}`} onClick={() => void refresh()} disabled={!!busy} aria-label="Refresh desk"><RefreshCw size={15} className={busy ? 'spin' : ''} /></button><span className="top-avatar">PM</span></div></header>
     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Demo entry fully reloads to initialize its isolated workspace. */}
     <main id="main-content"><div className="page-heading"><div><h1 ref={headingRef} tabIndex={-1}>{titles[view]}</h1><p>{descriptions[view]}</p></div>{workspaceMode === 'desk' && <div className="heading-actions">{view !== 'Risk lab' && <button className="button secondary" type="button" onClick={() => navigate('Risk lab')}><ShieldCheck size={15} />Risk walkthrough</button>}{workspaceMode === 'desk' && <a className="button secondary" href="/?demo=1"><FlaskConical size={15} />Guided demo</a>}{view === 'Overview' && <button type="button" className="button primary" onClick={() => { setResearchId(''); navigate('Research'); }}>New research<span className="button-icon"><ArrowUpRight size={16} /></span></button>}{view === 'Audit trail' && <button type="button" className="button primary" onClick={exportAudit} disabled={!snapshot}><Download size={15} />Export audit</button>}</div>}</div>
-    {loadError && view !== 'Risk lab' && <div className="connection-error" role="alert"><XCircle size={17} /><span>{loadError}{snapshot && ` Your last loaded Yahoo Finance desk is still visible.`}</span><button type="button" onClick={() => void refresh()}>Retry</button></div>}
+    {loadError && view !== 'Risk lab' && <div className="connection-error" role="alert"><XCircle size={17} /><span>{loadError}{snapshot && ` Your last loaded Yahoo Finance desk is still visible.`}</span>{authRecovery ? <a className="text-button" href={authRecovery.href} target="_top">{authRecovery.label}<ArrowUpRight size={14} /></a> : <button type="button" onClick={() => void refresh()}>Retry</button>}</div>}
     {view !== 'Risk lab' && workspaceMode === 'demo' && snapshot?.workspace === 'demo' && <DemoGuide snapshot={snapshot} busy={loadError ? 'loading' : busy} error={loadError || (toast?.error ? toast.message : undefined)} run={run} navigate={demoNavigate} openEvidence={setEvidence} exportAudit={exportAudit} />}
     {view !== 'Risk lab' && snapshot && <div className={`market-feed-status ${snapshot.marketFeed?.status || 'ok'}`} role="status"><span><span className="status-dot" />{marketPending ? `${loadError ? 'Could not load' : 'Loading'} Yahoo Finance${loadError ? '.' : '…'} Displaying the last loaded prices.` : snapshot.marketFeed?.message || 'Yahoo Finance quotes'}</span><span>{lastChecked ? `Last checked ${marketTime(lastChecked)}` : 'Awaiting market data'}</span></div>}
 
-    {view === 'Risk lab' ? <RiskLab workspace={workspaceMode} onOpenDesk={() => navigate('Overview')} /> : !snapshot ? <div className="loading-desk"><span className="loading-mark"><Layers3 size={24} /></span><h2>{loadError ? 'The desk is temporarily unavailable.' : 'Opening your investment desk…'}</h2><p>{loadError ? 'Retry the connection to load your portfolio and research.' : 'Loading the portfolio, source evidence, and order ledger.'}</p>{!loadError && <Loader2 className="spin muted" size={19} />}</div> : <div className="view-content" key={view} aria-busy={!!busy}>
+    {view === 'Risk lab' ? <RiskLab workspace={workspaceMode} onOpenDesk={() => navigate('Overview')} /> : !snapshot ? <div className="loading-desk"><span className="loading-mark"><Layers3 size={24} /></span><h2>{authRecovery ? 'Sign in to open your workspace.' : loadError ? 'The desk is temporarily unavailable.' : 'Opening your investment desk…'}</h2><p>{authRecovery ? 'Continue using the sign-in link above to access your portfolio and research.' : loadError ? 'Retry the connection to load your portfolio and research.' : 'Loading the portfolio, source evidence, and order ledger.'}</p>{!loadError && <Loader2 className="spin muted" size={19} />}</div> : <div className="view-content" key={view} aria-busy={!!busy}>
     {view === 'Overview' && <>
       <section className="portfolio-strip" aria-label="Portfolio summary"><div className="nav-metric"><span>Paper portfolio value <span className="currency-label">USD</span></span><strong>{nav === null ? 'Unavailable' : money(nav)}</strong>{dayChange !== null && nav !== null ? <span className={dayChange >= 0 ? 'positive' : 'negative'}>{dayChange >= 0 ? <ArrowUpRight size={15} /> : <ArrowDownLeft size={15} />}{money(Math.abs(dayChange))} ({percent(nav - dayChange ? dayChange / (nav - dayChange) * 100 : 0)})<span className="muted">vs. prior market close</span></span> : <span className="muted">Incomplete valuation · missing {missingPositions.map(position => position.symbol).join(', ')} quotes</span>}</div><div className="strip-metric"><span>Available cash</span><strong>{money(snapshot.state.cash)}</strong><small>{nav ? `${(snapshot.state.cash / nav * 100).toFixed(1)}% of portfolio` : 'Cash balance only'}</small></div><div className="strip-metric"><span>{completeValuation ? 'Invested capital' : 'Priced holdings · partial'}</span><strong>{pricedPositions.length ? money(positionValue) : positions.length ? 'Unavailable' : money(0)}</strong><small>{completeValuation ? `${positions.length} open positions` : `${pricedPositions.length} of ${positions.length} positions priced`}</small>{completeValuation && <span className="allocation-track" aria-hidden="true">{pricedPositions.map((position, index) => <i key={position.symbol} style={{ flex: position.shares * snapshot.market.find(q => q.symbol === position.symbol)!.price, opacity: 1 - index * .2 }} />)}</span>}</div><button type="button" className="strip-metric metric-action" onClick={() => navigate('Orders')}><span>Pending orders <ArrowUpRight size={13} /></span><strong>{pendingOrders.length}</strong><small>View order queue</small></button></section>
       <div className="overview-grid"><div className="panel-shell market-shell"><section className="market-panel panel"><div className="panel-heading"><div className="inline"><span className="section-tab active">Market overview</span></div><span className="small muted">Yahoo Finance</span></div><div className="market-title"><div className="inline"><Ticker symbol={symbol} /><div><label className="sr-only" htmlFor="chart-symbol">Select chart symbol</label><div className="symbol-select"><select id="chart-symbol" value={symbol} onChange={e => setSymbol(e.target.value)}>{SECURITIES.map(item => <option key={item.symbol} value={item.symbol}>{item.symbol}</option>)}</select><ChevronDown size={13} /></div><span>{quote?.name || selectedSecurity.name}</span></div></div><div className={`quote-price ${hasPrice(quote) ? '' : 'price-missing'}`}><strong>{hasPrice(quote) ? money(quote.price) : 'Unavailable'}</strong>{hasPrice(quote) && quote.previousClose > 0 && <span className={quote.price >= quote.previousClose ? 'positive' : 'negative'}>{percent((quote.price - quote.previousClose) / quote.previousClose * 100)}<small>vs. prior close</small></span>}</div></div>{hasPrice(quote) ? <><div className="quote-dateline"><span>{`Quoted ${marketTime(quote.timestamp)}`}</span>{<span>{quote.marketState === 'closed' ? 'Market closed' : quote.marketState === 'open' ? 'Market open' : 'Market status unknown'}{quote.stale ? ' · stale quote' : ''}</span>}</div>{quote.history.length ? <PriceChart key={`${displayMode}-${quote.symbol}`} quote={quote} /> : <Empty title="Chart history unavailable." description="The latest quote is available, but no intraday bars were returned." />}</> : <Empty title="Quote unavailable." description={`${selectedSecurity.symbol} has no usable Yahoo Finance price. Refresh to try again.`} />}<div className="market-source-note"><Clock3 size={12} /><span>{`Yahoo Finance · 5-minute bars. Quotes may be delayed${quote?.delaySeconds ? ` by ${Math.round(quote.delaySeconds / 60)} minutes` : ''}; real-time delivery is not guaranteed. ${lastChecked ? `Last checked ${marketTime(lastChecked)}.` : ''}`}</span></div></section></div>

@@ -1,14 +1,17 @@
+import {portableQueueAccess} from '../../../../lib/portable-operations';
+import {portableRuntime} from '../../../../lib/portable-auth';
 import { env } from 'cloudflare:workers';
 import { processAllQueuedOrders } from '../../../../lib/desk';
 import { acquireQueueRun, finishQueueRun, queueRunStatus } from '../../../../db/queue-runs';
 
 /**
- * Owner-private Sites service endpoint. Sites dispatch authenticates the service
- * credential before this handler. It does not impersonate a visitor. The only
+ * Sites dispatch authenticates its service credential before this handler;
+ * portable hosting requires an independent scheduler bearer secret. The only
  * authority here is each persisted order's explicit, bounded queue consent.
  * No user IDs, order details, approvals or policy overrides are accepted.
  */
 export async function POST(request:Request){
+  const denied=await portableQueueAccess(request);if(denied)return denied;
   const origin=request.headers.get('origin');
   if(origin&&origin!==new URL(request.url).origin)return Response.json({error:'Origin is not authorized.'},{status:403});
   if(request.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Origin is not authorized.'},{status:403});
@@ -29,7 +32,7 @@ export async function POST(request:Request){
 export async function GET(){
   return Response.json({
     purpose:'Process only explicitly queued Yahoo-priced paper orders. No real broker is connected.',
-    access:'Owner-private Sites service access. Obtain the current Site service credential via get_site; never save it in source or schedules.',
+    access:portableRuntime()?'Scheduler-only access with the server MANDATE_QUEUE_SECRET as a bearer token. Keep it out of browser code and source.':'Owner-private Sites service access. Obtain the current Site service credential via get_site; never save it in source or schedules.',
     run:{method:'POST',path:'/api/queue/process',body:'empty'},
     readback:{method:'GET',path:'/api/queue/status'},
     behavior:'Closed, unknown or stale quotes remain waiting. Open-session fresh quotes must pass authorization, price drift, mandate, portfolio, evidence and PRISM checks. Repeated requests cannot create duplicate fills.',
