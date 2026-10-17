@@ -46,7 +46,7 @@ The guardrail script requires enforcement, creates three actual oversized-order 
 
 ## Recorded integration verification
 
-The build session completed **47 unit tests**, **7 Playwright tests** (30.2 seconds), TypeScript checking and the Desktop production build/setup. Browser tests included a live, PRISM-enforced MSFT buy-one proposal → approval → execution with exactly one fill, plus an oversized order denied with an unchanged ledger. These results describe this build session, not ongoing monitoring.
+The latest interface verification passed **47 unit tests**, **12 Playwright tests** (38.8 seconds), ESLint and TypeScript checking. The browser suite includes the seven research/order/blocked-workflow checks plus five interaction checks for keyboard charts, selected states, mobile focus and drawer motion. Workflow coverage includes a live, PRISM-enforced MSFT buy-one proposal → approval → execution with exactly one fill and an oversized order denied with an unchanged ledger. See the [UI refinement record](docs/UI-REFINEMENT.md) for screenshot coverage, final targeted polish verification and diagnostic limits. These are build-session results, not ongoing monitoring.
 
 On **October 17, 2026**, the build session verified live Nicrron and PRISM provider requests. A real PRISM custom rule, **Mandate blocked order**, blocked an oversized-order scenario with enforcement enabled. The portfolio revision remained **2**, with trace ID `80288ef5-24af-49be-a081-aa7db80cd4ba`. This is one recorded blocking check, not proof of every hackathon requirement.
 

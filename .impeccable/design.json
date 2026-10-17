@@ -1,72 +1,105 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-17T15:44:08.429042+00:00",
+  "generatedAt": "2026-10-17T16:02:50.798579+00:00",
   "title": "Design System: Mandate",
   "extensions": {
     "colorMeta": {
       "accent": {
         "role": "primary",
-        "displayName": "Burnt orange"
+        "displayName": "Deep teal"
       },
       "canvas": {
         "role": "neutral",
-        "displayName": "Ivory workspace"
+        "displayName": "Silver workspace"
       },
-      "rail": {
+      "graphite": {
         "role": "neutral",
-        "displayName": "Graphite rail"
+        "displayName": "Graphite structure"
+      },
+      "shell": {
+        "role": "neutral",
+        "displayName": "Toned outer shell"
+      }
+    },
+    "typographyMeta": {
+      "measurement": {
+        "displayName": "Tabular balance",
+        "purpose": "Portfolio totals and financial measurements use tabular Geist numerals."
+      },
+      "code": {
+        "displayName": "Code and identifiers",
+        "purpose": "Technical identifiers and preformatted data only."
       }
     },
     "shadows": [
       {
+        "name": "core",
+        "value": "0 1px 3px rgb(24 29 36 / 2%)",
+        "purpose": "Subtle resting separation for the inner surface of a shell."
+      },
+      {
+        "name": "shell",
+        "value": "inset 0 1px 0 rgb(255 255 255 / 85%), 0 8px 26px -24px rgb(24 29 36 / 35%)",
+        "purpose": "Outer-shell highlight and separation."
+      },
+      {
         "name": "toast",
-        "value": "0 6px 25px #27331c22",
-        "purpose": "Temporary status notification."
+        "value": "0 12px 40px -14px rgb(24 29 36 / 24%)",
+        "purpose": "Temporary operation status above the desk."
       },
       {
         "name": "evidence-drawer",
-        "value": "-12px 0 45px #15240918",
-        "purpose": "Evidence overlay above the workspace."
-      },
-      {
-        "name": "selected-order",
-        "value": "inset 2px 0 #678957",
-        "purpose": "Selected desktop order indicator."
+        "value": "-15px 0 60px -25px rgb(24 29 36 / 25%)",
+        "purpose": "Separate the evidence overlay from the workspace."
       }
     ],
     "motion": [
       {
-        "name": "control-transition",
-        "value": "background 160ms, color 160ms, border-color 160ms",
-        "purpose": "Control state feedback."
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Surface and control state changes."
       },
       {
-        "name": "mobile-navigation",
-        "value": "transform 180ms",
-        "purpose": "Mobile navigation entry and exit."
+        "name": "ease-press",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Immediate pressed-state response."
+      },
+      {
+        "name": "button-press",
+        "value": "scale(0.97); 70ms",
+        "purpose": "Immediate tactile feedback; removed for reduced motion."
+      },
+      {
+        "name": "drawer-spring",
+        "value": "unit mass; stiffness 420; damping 41",
+        "purpose": "Interruptible near-critically-damped drawer settling with velocity handoff."
       },
       {
         "name": "reduced-motion",
-        "value": "animation: none !important; transition: none !important",
-        "purpose": "Applied under prefers-reduced-motion: reduce."
+        "value": "animation: none; transition-duration: 0.01ms; spring snaps to target",
+        "purpose": "Preserve state feedback without positional animation."
       }
     ],
     "breakpoints": [
       {
         "name": "wide",
-        "value": "1550px"
+        "value": "1600px"
       },
       {
         "name": "compact-desktop",
-        "value": "1230px"
+        "value": "1320px"
       },
       {
-        "name": "compact-rail",
-        "value": "1020px"
+        "name": "tablet-rail",
+        "value": "1100px"
+      },
+      {
+        "name": "compact-workarea",
+        "value": "980px"
       },
       {
         "name": "stacked",
-        "value": "820px"
+        "value": "800px"
       },
       {
         "name": "mobile",
@@ -79,9 +112,9 @@
       "name": "Primary button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Primary review action.",
-      "html": "<button class=\"ds-primary\">Approve paper order</button>",
-      "css": ".ds-primary{background:var(--accent,#d65332);color:#fff;border:1px solid var(--accent,#d65332);border-radius:6px;padding:9px 14px;min-height:36px;font:550 11px/1.3 var(--font-sans,Arial,sans-serif);cursor:pointer;transition:background 160ms,color 160ms,border-color 160ms}.ds-primary:hover{background:#ba4328;border-color:#ba4328}.ds-primary:focus-visible{outline:2px solid var(--accent,#d65332);outline-offset:3px}"
+      "description": "Primary review action with a nested trailing icon.",
+      "html": "<button class=\"ds-primary\">New research <span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.35\"><path d=\"M7 17 17 7M7 7h10v10\"/></svg></span></button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;gap:9px;min-height:43px;padding:11px 18px;border:0;border-radius:999px;background:var(--accent,#006b61);color:#fff;font:550 13px/1.35 var(--font-sans,\"Geist\",system-ui,sans-serif);box-shadow:inset 0 1px 0 rgb(255 255 255 / 10%),0 3px 7px rgb(0 89 76 / 7%);cursor:pointer;transition:background 190ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.2,.8,.2,1)}.ds-primary>span{display:grid;place-items:center;width:27px;height:27px;margin:-5px -10px -5px 3px;border-radius:50%;background:rgb(255 255 255 / 15%);transition:transform 220ms cubic-bezier(.22,1,.36,1)}.ds-primary:hover{background:var(--accent-hover,#00554d)}.ds-primary:hover>span{transform:translate(1px,-1px)}.ds-primary:active{transform:scale(.97);transition-duration:70ms}.ds-primary:focus-visible{outline:3px solid #54a99a;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-primary>span{transition:none;transform:none!important}}"
     },
     {
       "name": "Secondary button",
@@ -89,7 +122,7 @@
       "refersTo": "button-secondary",
       "description": "Supporting workspace action.",
       "html": "<button class=\"ds-secondary\">View evidence</button>",
-      "css": ".ds-secondary{background:#fff;color:#4e584c;border:1px solid #d9ddd1;border-radius:6px;padding:9px 14px;min-height:36px;font:550 11px/1.3 var(--font-sans,Arial,sans-serif);cursor:pointer;transition:background 160ms,border-color 160ms}.ds-secondary:hover{background:#eef0e8;border-color:#bfc7b6}.ds-secondary:focus-visible{outline:2px solid var(--accent,#d65332);outline-offset:3px}"
+      "css": ".ds-secondary{min-height:43px;padding:11px 18px;border:0;border-radius:999px;background:#fff;color:#3f5059;box-shadow:inset 0 0 0 1px rgb(24 29 36 / 9%);font:550 13px/1.35 var(--font-sans,\"Geist\",system-ui,sans-serif);cursor:pointer;transition:background 190ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.2,.8,.2,1)}.ds-secondary:hover{background:#e8eeeb;color:#245f53}.ds-secondary:active{transform:scale(.97);transition-duration:70ms}.ds-secondary:focus-visible{outline:3px solid #54a99a;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none;transform:none!important}}"
     },
     {
       "name": "Quantity input",
@@ -97,54 +130,60 @@
       "refersTo": "input",
       "description": "Labeled proposal input.",
       "html": "<label class=\"ds-field\">Shares <input type=\"number\" min=\"1\" value=\"5\"></label>",
-      "css": ".ds-field{display:grid;gap:8px;color:var(--secondary,#626a64);font:11px var(--font-sans,Arial,sans-serif)}.ds-field input{padding:9px 11px;color:var(--foreground,#222923);background:#fff;border:1px solid var(--divider,#dedfd8);border-radius:6px;font:14px var(--font-sans,Arial,sans-serif)}.ds-field input:focus-visible{outline:2px solid var(--accent,#d65332);outline-offset:3px}"
+      "css": ".ds-field{display:grid;gap:10px;color:var(--secondary,#66717d);font:13px var(--font-sans,\"Geist\",system-ui,sans-serif)}.ds-field input{min-height:44px;padding:11px 14px;border:0;border-radius:12px;background:#fff;color:var(--foreground,#181d24);box-shadow:inset 0 0 0 1px #dce2e7;font:15px var(--font-sans,\"Geist\",system-ui,sans-serif)}.ds-field input:focus-visible{outline:3px solid #54a99a;outline-offset:4px}"
     },
     {
       "name": "Active navigation",
       "kind": "nav",
-      "description": "Selected workspace section.",
-      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav-item\" aria-current=\"page\">Orders</button></nav>",
-      "css": ".ds-nav{padding:15px;background:var(--rail,#202522)}.ds-nav-item{display:block;width:100%;padding:12px;text-align:left;border:0;border-radius:6px;background:#354137;color:#eaf1e5;min-height:43px;font:12px var(--font-sans,Arial,sans-serif);cursor:pointer;transition:background 160ms,color 160ms}.ds-nav-item:hover{background:#2d352f;color:#fff}.ds-nav-item:focus-visible{outline:2px solid var(--accent,#d65332);outline-offset:3px}"
+      "description": "Active destination in the floating rail.",
+      "html": "<nav class=\"ds-nav\"><button aria-current=\"page\">Orders</button></nav>",
+      "css": ".ds-nav{padding:14px;border-radius:24px;background:var(--rail,#181d24)}.ds-nav button{width:100%;min-height:46px;padding:11px 13px;border:0;border-radius:12px;background:#edf3f0;color:#213a34;text-align:left;font:14px var(--font-sans,\"Geist\",system-ui,sans-serif);cursor:pointer;transition:background 190ms cubic-bezier(.22,1,.36,1),transform 150ms cubic-bezier(.2,.8,.2,1)}.ds-nav button:hover{background:#262f38;color:#fff}.ds-nav button:active{transform:scale(.975)}.ds-nav button:focus-visible{outline:3px solid #54a99a;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-nav button{transition:none;transform:none!important}}"
     },
     {
       "name": "Blocked status",
       "kind": "chip",
-      "description": "Written status reinforces semantic color.",
+      "description": "Explicit status reinforces semantic color.",
       "html": "<span class=\"ds-badge\">Blocked</span>",
-      "css": ".ds-badge{display:inline-flex;gap:5px;white-space:nowrap;font:500 10px var(--font-sans,Arial,sans-serif);padding:3px 7px;border:1px solid #efd9d1;border-radius:4px;color:#ae5948;background:#fbf0ec}"
+      "css": ".ds-badge{display:inline-flex;gap:6px;padding:5px 9px;border-radius:7px;background:#fbecef;color:#a13c4b;font:500 12px/1.3 var(--font-sans,\"Geist\",system-ui,sans-serif);white-space:nowrap}"
     },
     {
-      "name": "Review panel",
+      "name": "Review surface",
       "kind": "card",
-      "refersTo": "panel",
-      "description": "Flat bordered container for the review workspace.",
-      "html": "<section class=\"ds-panel\"><header>Mandate checks</header><p>Order value exceeds the current limit.</p></section>",
-      "css": ".ds-panel{background:var(--panel,#fff);border:1px solid var(--divider,#dedfd8);border-radius:9px;overflow:hidden;color:var(--foreground,#222923);font:14px var(--font-sans,Arial,sans-serif)}.ds-panel header{display:flex;align-items:center;min-height:52px;padding:0 21px;border-bottom:1px solid #e7e9e1;font-size:13px;font-weight:550}.ds-panel p{padding:20px;font-size:12px;color:var(--secondary,#626a64)}"
+      "refersTo": "panel-shell",
+      "description": "Concentric shell around the main review surface.",
+      "html": "<div class=\"ds-shell\"><section><header>Mandate checks</header><p>Order value exceeds the current limit.</p></section></div>",
+      "css": ".ds-shell{padding:6px;border-radius:27px;background:var(--shell,#e9edf0);box-shadow:inset 0 1px 0 rgb(255 255 255 / 85%),0 8px 26px -24px rgb(24 29 36 / 35%);font:15px var(--font-sans,\"Geist\",system-ui,sans-serif)}.ds-shell section{overflow:hidden;border-radius:21px;background:var(--panel,#fff);color:var(--foreground,#181d24);box-shadow:var(--shadow-core,0 1px 3px rgb(24 29 36 / 2%)),inset 0 1px 0 rgb(255 255 255 / 70%)}.ds-shell header{display:flex;align-items:center;min-height:68px;padding:0 26px;font-weight:560;box-shadow:0 1px 0 rgb(24 29 36 / 5%)}.ds-shell p{padding:24px 26px;margin:0;color:var(--secondary,#66717d);font-size:14px}"
     }
   ],
   "narrative": {
-    "northStar": "Portfolio blotter",
-    "overview": "A graphite navigation rail frames an ivory working surface, precise tables and visible permission checks. Evidence and authorization are reviewable alongside the paper order.",
+    "northStar": "Evidence beside the decision",
+    "overview": "A floating graphite rail anchors silver surfaces, large tabular balances and an asymmetric review area. Soft Structuralism gives market analysis and permission review distinct space while preserving the density of a working investment desk.",
     "keyCharacteristics": [
-      "Flat bordered panels",
-      "Tabular measurements",
-      "Explicit permission reasons",
-      "Visible simulation and source dates"
+      "Shipped Geist typography",
+      "Tabular sans-serif financial values",
+      "Concentric tone-separated surfaces",
+      "Interruptible evidence drawer",
+      "Explicit permission reasons"
     ],
     "rules": [
       {
         "name": "Written states",
-        "body": "Pair permission colors with a written status and reason.",
+        "body": "Pair semantic permission colors with a written status and reason.",
         "section": "colors"
+      },
+      {
+        "name": "Functional hierarchy",
+        "body": "Use size, weight and placement to separate balances, decisions and source context.",
+        "section": "typography"
       }
     ],
     "dos": [
-      "Keep source dates and simulation labels visible.",
-      "Preserve keyboard focus and reduced motion."
+      "Keep historical source dates and simulation labels visible.",
+      "Preserve keyboard/touch parity, focus and reduced motion/transparency."
     ],
     "donts": [
-      "Do not imply live markets or performance through decoration.",
-      "Do not replace permission reasons with an unexplained score."
+      "Do not invent live pricing, performance or provider proof.",
+      "Do not impose delayed marketing reveals on repeated desk tasks."
     ]
   }
 }

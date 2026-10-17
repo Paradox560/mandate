@@ -32,6 +32,8 @@ These are intended code behaviors to verify with the implementation's checks. A 
 - **7 Playwright tests passed in 30.2 seconds**, including a real PRISM-enforced MSFT buy-one proposal, approval and execution with exactly one fill, plus an oversized order denied without changing the ledger.
 - Live Nicrron and PRISM provider calls were verified. The rule **Mandate blocked order** returned an evaluated block for an oversized-order scenario with enforcement enabled; portfolio revision **2** remained unchanged. Trace: `80288ef5-24af-49be-a081-aa7db80cd4ba`.
 
+The subsequent interface-refinement run passed **12 browser checks in 38.8 seconds**, **47 unit tests**, ESLint and TypeScript checking. Its screenshot coverage and final targeted checks are recorded in [UI-REFINEMENT.md](UI-REFINEMENT.md). The initial seven-test result above remains the historical provider/workflow check.
+
 These are build-session results reported by the implementation and browser verification tasks. They are not continuous monitoring or proof of the remaining PRISM dashboard criteria. Repeat local checks using README.md. `node scripts/verify-guardrails.mjs` generates three real oversize scenarios with enforcement required and asserts a remote block and unchanged ledger; its presence does not establish that PRISM grouped those runs.
 
 Three further real enforced blocks were recorded by `scripts/verify-guardrails.mjs` with an unchanged ledger: `0d83e43e-b403-45e8-a1a4-6ebb70eafbf2`, `8df6c6aa-da8b-4997-b9ed-94766828549e`, and `694c615b-4f66-4845-b9fc-19bd2e81cd94`. Local receipts are in the ignored `outputs/guardrail-proof.json.txt`. Their Block Check classifications and Intelligence grouping still need dashboard inspection.
