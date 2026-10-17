@@ -2,6 +2,10 @@
 
 This document separates recorded build-session checks from the proof still needed for judging. Unchecked items require evidence from an actual run.
 
+## Guided presentation
+
+Use **Guided demo** or `/?demo=1` for an isolated, repeatable walkthrough. The guide exposes actual research, proposal, approval, fill and block results one step at a time. Starting over clears only the separate demo portfolio. See [the three-minute presenter script](PRESENTATION.md) for what to click, say and inspect. The manual workflow below remains available in the main paper desk.
+
 ## Explain the clocks first
 
 The app is a paper desk. Its default Yahoo Finance view shows actual provider timestamps and five-minute bars from the latest available regular session, with a separate last-checked time. Quotes refresh every minute but can be delayed or unavailable. Closed markets show the previous session. The research corpus remains historical; current prices do not refresh its sources.

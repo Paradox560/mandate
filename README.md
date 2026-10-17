@@ -24,6 +24,12 @@ Yahoo prices need no API key. The six company logos are already cached in `publi
 
 After changes, `npm run build` produces the Worker build. `npm start` serves that build through local Wrangler; it does not publish a deployment. The stack is React, TypeScript, Vinext, Cloudflare Workers and D1.
 
+## Present the demo
+
+Open [the guided presentation](https://mandate-investment-desk.pranav4096.chatgpt.site/?demo=1) while signed in, or use **Guided demo** from the desk. The guide runs in a separate paper portfolio, with synthetic replay prices and clearly dated 2025 evidence. It walks through MSFT research, a source citation, a one-share proposal, explicit approval, a paper fill, an oversized-order block and an exportable audit record.
+
+Starting or restarting the guide changes only that isolated demo. Live research uses Nicrron when configured; **Use sample demo memo** is an explicit alternative. PRISM enforcement remains active, and provider errors are shown rather than converted into successful runs. The site remains private: present from your signed-in session or screen share. Follow the [three-minute presenter script](docs/PRESENTATION.md).
+
 ## Checks
 
 ```sh
@@ -47,6 +53,8 @@ The workflow check makes real application requests, creates paper orders and ret
 The guardrail script requires enforcement, creates three actual oversized-order runs and checks remote blocks against an unchanged ledger. Dashboard Block Check and Intelligence clustering still require inspection. Browser checks use Playwright; install its Chromium browser with `npx playwright install chromium` if needed. Check [the demo record](docs/DEMO.md) for completed and outstanding verification; a command's presence is not a passing result.
 
 ## Recorded integration verification
+
+The guided-demo update passed **79 unit tests**, **20 distinct browser cases**, and TypeScript checking. Its real Nicrron → proposal → human approval → paper fill → PRISM block rehearsal preserved the main desk. See [the presenter script and recorded rehearsal](docs/PRESENTATION.md).
 
 The market-data update passed **68 unit tests**, **16 Playwright tests** (44.2 seconds), and TypeScript checking. Browser coverage includes source selection, dated bars, all six logo assets, missing-price valuation and late-response handling, plus the existing chart, mobile navigation and evidence drawer interactions. Workflow coverage includes a live, PRISM-enforced replay MSFT buy-one proposal → approval → execution with exactly one fill and an oversized order denied with an unchanged ledger. See the [market-data record](docs/MARKET-DATA.md) and earlier [UI refinement record](docs/UI-REFINEMENT.md). These are build-session results, not ongoing monitoring.
 
