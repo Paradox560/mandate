@@ -6,3 +6,5 @@ PRISM_PROJECT_ID=
 PRISM_AGENT_ID=mandate-research
 # Optional: after configuring a PRISM enforce-mode guardrail, set true.
 PRISM_ENFORCE=false
+# Used by npm run logos:sync to download the six company marks; never sent to browsers.
+TWELVE_DATA_API_KEY=

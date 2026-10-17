@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "provider": "Twelve Data",
+  "updatedAt": "2026-10-17T16:49:37.724Z",
+  "logos": {
+    "NVDA": {
+      "path": "/logos/NVDA.jpg",
+      "providerUrl": "https://api.twelvedata.com/logo/nvidia.com",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.229Z",
+      "mimeType": "image/jpeg",
+      "bytes": 7171,
+      "sha256": "0a3ef9faacf8f39b0992d9fac41aec9867871dd747001fe24184011afc70f662",
+      "fetchedAt": "2026-10-17T16:49:37.352Z"
+    },
+    "MSFT": {
+      "path": "/logos/MSFT.jpg",
+      "providerUrl": "https://api.twelvedata.com/logo/microsoft.com",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.353Z",
+      "mimeType": "image/jpeg",
+      "bytes": 6239,
+      "sha256": "e366b146c77fd38b7920b903cbd90358e81ffcd4be398fcb86cb73a5bc660fae",
+      "fetchedAt": "2026-10-17T16:49:37.408Z"
+    },
+    "AAPL": {
+      "path": "/logos/AAPL.jpg",
+      "providerUrl": "https://api.twelvedata.com/logo/apple.com",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.409Z",
+      "mimeType": "image/jpeg",
+      "bytes": 5750,
+      "sha256": "0c86b6a067f7dec56f3e34c7c4a340c1a6e18826bcc78be747bffe085af201b4",
+      "fetchedAt": "2026-10-17T16:49:37.456Z"
+    },
+    "GOOGL": {
+      "path": "/logos/GOOGL.jpg",
+      "providerUrl": "https://api.twelvedata.com/logo/abc.xyz",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.456Z",
+      "mimeType": "image/jpeg",
+      "bytes": 7836,
+      "sha256": "0a3f7912f506506cf1327b071cdafdda359e4b3259a431c4c44ad1877cb02551",
+      "fetchedAt": "2026-10-17T16:49:37.509Z"
+    },
+    "AMZN": {
+      "path": "/logos/AMZN.jpg",
+      "providerUrl": "https://api.twelvedata.com/logo/amazon.com",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.510Z",
+      "mimeType": "image/jpeg",
+      "bytes": 4556,
+      "sha256": "d1b43df7ab7dfb8743ed6a8ab503f0bf1ffc8a89c17f09604780bc34f1d64105",
+      "fetchedAt": "2026-10-17T16:49:37.561Z"
+    },
+    "META": {
+      "path": "/logos/META.jpg",
+      "providerUrl": "https://logo.twelvedata.com/symbols/fb-meta.jpg",
+      "exchange": "NASDAQ",
+      "status": "ready",
+      "attemptedAt": "2026-10-17T16:49:37.561Z",
+      "mimeType": "image/jpeg",
+      "bytes": 22812,
+      "sha256": "2db2f711098cfd32a8ff9b68735b704d0c055ed77b1014d28991ede5190f077c",
+      "fetchedAt": "2026-10-17T16:49:37.724Z"
+    }
+  }
+}
