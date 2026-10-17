@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 export const workspaces=sqliteTable('workspaces',{id:text('id').primaryKey(),payload:text('payload').notNull(),revision:integer('revision').notNull().default(1)});
 export const queueRunner=sqliteTable('queue_runner',{
   id:text('id').primaryKey(),
@@ -8,3 +8,9 @@ export const queueRunner=sqliteTable('queue_runner',{
   lastCompletedAt:text('last_completed_at'),
   lastResult:text('last_result'),
 });
+export const riskRuns=sqliteTable('risk_runs',{
+  id:text('id').primaryKey(),
+  workspaceId:text('workspace_id').notNull(),
+  createdAt:text('created_at').notNull(),
+  payload:text('payload').notNull(),
+},table=>[index('risk_runs_workspace_created').on(table.workspaceId,table.createdAt)]);

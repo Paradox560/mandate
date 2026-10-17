@@ -15,6 +15,13 @@
       "when": 1792261004557,
       "tag": "0001_little_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792262107468,
+      "tag": "0002_flawless_captain_marvel",
+      "breakpoints": true
     }
   ]
 }
