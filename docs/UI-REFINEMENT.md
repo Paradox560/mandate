@@ -40,4 +40,6 @@ Screenshots were captured for all six workspace views at **1440px desktop** and 
 
 After the full suite, final polish fixed desktop close-button visibility, bounded long history/order lists and responsive chart-axis sizing. The three-width screenshot capture was repeated successfully. Four targeted chart/mobile checks passed, followed by three citation/drawer checks after the motion hook's ref-ownership refinement. ESLint and TypeScript checking also passed. The production build is verified separately during publication.
 
+Final review found and fixed stale release velocity after a short drag followed by a stationary hold. Release samples now expire after 100ms and include the release position/time. A new regression covers a 120px drag held for 180ms: the drawer stays open and returns to rest. All four drawer/citation cases passed after this fix. The browser suite now contains 13 checks; the earlier 12-check duration above describes the full run before adding this regression.
+
 The checks establish the listed behaviors and viewports. They do not establish full WCAG conformance, every assistive-technology combination, a numerical visual score or a passing taste-skill diagnostic. Reduced transparency, contrast preferences and any new edge cases remain subject to direct review when affected by changes.

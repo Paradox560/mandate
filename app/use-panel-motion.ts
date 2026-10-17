@@ -64,6 +64,9 @@ export function usePanelMotion(close: () => void) {
   const release = useCallback((event: PointerEvent<HTMLDivElement>, cancelled = false) => {
     const s = state.current; if (!s.dragging) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const releasedAt = performance.now();
+    s.samples = s.samples.filter(sample => releasedAt - sample.time < 100);
+    s.samples.push({ x: s.x, time: releasedAt });
     const first = s.samples[0], last = s.samples.at(-1);
     s.velocity = first && last && last.time > first.time ? Math.max(-1600, Math.min(1600, (last.x - first.x) / (last.time - first.time) * 1000)) : 0;
     // Apple's exponential-decay projection, with a short side-sheet deceleration.

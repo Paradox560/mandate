@@ -120,6 +120,39 @@ test.describe('mobile menu focus', () => {
 test.describe('evidence drawer with normal motion', () => {
   test.use({ reducedMotion: 'no-preference' });
 
+  test('a short drag held still before release stays open and returns to rest', async ({ page }) => {
+    const citation = await openMsftResearch(page);
+    await citation.click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer.getByText('MSFT', { exact: true })).toBeVisible();
+    const handle = drawer.locator('.drawer-grab');
+    await handle.hover();
+    const handleBounds = await handle.boundingBox();
+    const initialBounds = await drawer.boundingBox();
+    expect(handleBounds).not.toBeNull();
+    expect(initialBounds).not.toBeNull();
+    const startX = handleBounds!.x + handleBounds!.width / 2;
+    const startY = handleBounds!.y + handleBounds!.height / 2;
+    expect(120).toBeLessThan(initialBounds!.width * 0.4);
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 120, startY, { steps: 4 });
+    expect((await drawer.boundingBox())!.x - initialBounds!.x).toBeCloseTo(120, 0);
+    // This stationary hold is the gesture under test: release must not reuse
+    // the earlier flick velocity after the pointer has stopped moving.
+    await page.waitForTimeout(180);
+    await page.mouse.up();
+    await expect.poll(async () => {
+      const bounds = await drawer.boundingBox();
+      return bounds ? Math.abs(bounds.x - initialBounds!.x) : Number.POSITIVE_INFINITY;
+    }, { timeout: 5000 }).toBeLessThan(1);
+    await expect(drawer).toBeVisible();
+    await expect(page.locator('#main-content').locator('..')).toHaveAttribute('inert', '');
+    await page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
+    await expect(citation).toBeFocused();
+  });
+
   test('dragging right dismisses the MSFT source and reopening leaves no stale scroll lock', async ({ page }) => {
     const citation = await openMsftResearch(page);
     const priorOverflow = await page.evaluate(() => document.body.style.overflow);
