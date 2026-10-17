@@ -1,4 +1,4 @@
-import {readFileSync, writeFileSync, renameSync, statSync, mkdirSync, existsSync} from 'node:fs';
+import {readFileSync, writeFileSync, renameSync, statSync, mkdirSync, existsSync, chmodSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {normalizePreviewUrl} from './ninoo-publish.mjs';
 
@@ -16,7 +16,10 @@ manifest.scripts ??= {};
 for (const command of ['dev', 'build', 'start']) {
   manifest.scripts[command] = `node scripts/ninoo-host.mjs ${command}`;
 }
-if (previewUrl) manifest.scripts.build = 'node scripts/ninoo-publish.mjs';
+if (previewUrl) {
+  manifest.scripts.dev = 'sh .ninoo/dev';
+  manifest.scripts.build = 'node scripts/ninoo-publish.mjs';
+}
 manifest.dependencies ??= {};
 manifest.dependencies.node = '22.23.3';
 manifest.pnpm ??= {};
@@ -35,5 +38,16 @@ if (contents !== readFileSync(packagePath, 'utf8')) {
 if (previewUrl) {
   mkdirSync(fileURLToPath(new URL('../.ninoo/', import.meta.url)), {recursive: true, mode: 0o700});
   writeFileSync(publishConfigPath, JSON.stringify({previewUrl}, null, 2) + '\n', {mode: 0o600});
+  // Ninoo restarts from this saved launcher, independently of package scripts.
+  const launcherPath = fileURLToPath(new URL('../.ninoo/dev', import.meta.url));
+  const launcher = `#!/bin/sh
+set -eu
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd -- "$SCRIPT_DIR/.."
+export PORT="\${PORT:-5173}"
+exec node scripts/ninoo-host.mjs start "$@"
+`;
+  writeFileSync(launcherPath, launcher, {mode: 0o755});
+  chmodSync(launcherPath, 0o755);
 }
 console.log('Ninoo host profile enabled in this checkout. Install dependencies and update its lockfile before publishing.');

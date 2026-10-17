@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdtempSync, mkdirSync, readFileSync, writeFileSync, cpSync, symlinkSync, rmSync, realpathSync} from 'node:fs';
+import {mkdtempSync, mkdirSync, readFileSync, writeFileSync, cpSync, symlinkSync, rmSync, realpathSync, statSync, chmodSync, existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -31,6 +31,7 @@ test('Ninoo profile changes only the target scripts and pinned runtime, idempote
   assert.deepEqual(manifest.pnpm, {onlyBuiltDependencies: ['sharp', 'node'], ignoredBuiltDependencies: ['keep-ignored'], overrides: {'keep-package': '1.0.0'}});
   assert.equal(spawnSync(process.execPath, args).status, 0);
   assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), first);
+  assert.equal(existsSync(join(root, '.ninoo/dev')), false);
 });
 
 test('preview profile selects static publish and retains its validated private configuration', t => {
@@ -38,10 +39,46 @@ test('preview profile selects static publish and retains its validated private c
   const args = [join(root, 'scripts/prepare-ninoo.mjs'), '--preview-url', 'https://p-0ddc1537ea56a25c.preview.ninoo.app'];
   const prepared = spawnSync(process.execPath, args, {encoding: 'utf8'});
   assert.equal(prepared.status, 0, prepared.stderr);
-  assert.equal(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts.build, 'node scripts/ninoo-publish.mjs');
+  const first = readFileSync(join(root, 'package.json'), 'utf8');
+  assert.equal(JSON.parse(first).scripts.build, 'node scripts/ninoo-publish.mjs');
+  assert.equal(JSON.parse(first).scripts.dev, 'sh .ninoo/dev');
   assert.deepEqual(JSON.parse(readFileSync(join(root, '.ninoo/publish.json'), 'utf8')), {previewUrl: 'https://p-0ddc1537ea56a25c.preview.ninoo.app/'});
+  const launcherPath = join(root, '.ninoo/dev');
+  const launcher = readFileSync(launcherPath, 'utf8');
+  assert.equal(statSync(launcherPath).mode & 0o777, 0o755);
+  chmodSync(launcherPath, 0o600);
   assert.equal(spawnSync(process.execPath, [args[0]]).status, 0);
-  assert.equal(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts.build, 'node scripts/ninoo-publish.mjs');
+  assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), first);
+  assert.equal(readFileSync(launcherPath, 'utf8'), launcher);
+  assert.equal(statSync(launcherPath).mode & 0o777, 0o755);
+});
+
+test('saved preview launcher restores Node mode and private configuration after restart from another directory', t => {
+  const root = fixture(t);
+  mkdirSync(join(root, '.ninoo/server'), {recursive: true});
+  writeFileSync(join(root, '.ninoo/dev'), '#!/bin/sh\nexit 99\n', {mode: 0o600});
+  mkdirSync(join(root, 'node_modules/node/bin'), {recursive: true});
+  symlinkSync(process.execPath, join(root, 'node_modules/node/bin/node'));
+  writeFileSync(join(root, '.env.ninoo.local'), 'MANDATE_PRIVATE_TEST_SENTINEL=never-print-this-test-value\n');
+  writeFileSync(join(root, '.ninoo/server/server.js'), 'console.log(JSON.stringify({entry:"staged",runtime:process.env.MANDATE_RUNTIME,port:process.env.PORT,cwd:process.cwd(),hasPrivateEnv:!!process.env.MANDATE_PRIVATE_TEST_SENTINEL,args:process.argv.slice(2)}));');
+  writeFileSync(join(root, 'scripts/run-ninoo.mjs'), 'throw new Error("wrong entry");');
+  const prepare = spawnSync(process.execPath, [join(root, 'scripts/prepare-ninoo.mjs'), '--preview-url', 'https://p-0ddc1537ea56a25c.preview.ninoo.app'], {encoding: 'utf8'});
+  assert.equal(prepare.status, 0, prepare.stderr);
+  for (const inherited of [{}, {MANDATE_RUNTIME: 'sites', PORT: '4567'}]) {
+    const environment = {...process.env};
+    delete environment.MANDATE_RUNTIME;
+    delete environment.PORT;
+    delete environment.MANDATE_PRIVATE_TEST_SENTINEL;
+    const run = spawnSync(join(root, '.ninoo/dev'), ['--restart-check'], {
+      cwd: tmpdir(), env: {...environment, ...inherited}, encoding: 'utf8',
+    });
+    assert.equal(run.status, 0, run.stderr);
+    assert.deepEqual(JSON.parse(run.stdout), {
+      entry: 'staged', runtime: 'node', port: inherited.PORT ?? '5173',
+      cwd: realpathSync(root), hasPrivateEnv: true, args: ['--restart-check'],
+    });
+    assert.equal((run.stdout + run.stderr).includes('never-print-this-test-value'), false);
+  }
 });
 
 test('start prefers the privately staged standalone server with Node runtime and PORT', t => {

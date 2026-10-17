@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-17T20:57:57.767Z",
+  "publicUrl": "https://mandate-4489.ninoo.app/?judge=1",
+  "applicationUrl": "https://p-0ddc1537ea56a25c.preview.ninoo.app/?judge=1",
+  "incorrectCodeStatus": 401,
+  "correctCodeStatus": 200,
+  "authenticatedMode": "code",
+  "judgeUI": "loaded",
+  "savedLauncher": ".ninoo/dev",
+  "runtime": "Node production through scripts/ninoo-host.mjs start"
+}
