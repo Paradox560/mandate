@@ -7,5 +7,5 @@ export const metadata: Metadata = {
   icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="sr-only skip-link" href="#main-content">Skip to main content</a>{children}</body></html>;
+  return <html lang="en"><head><link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" /></head><body><a className="sr-only skip-link" href="#main-content">Skip to main content</a>{children}</body></html>;
 }
