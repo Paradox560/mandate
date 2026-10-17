@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { usePanelMotion } from './use-panel-motion';
+import { DemoGuide } from './demo-guide';
 import type { Action, AuditEvent, DeskSnapshot, Evidence, Order, Policy, Quote, Research, MarketMode } from '../lib/types';
 
 type View = 'Overview' | 'Research' | 'Orders' | 'Mandate' | 'Audit trail' | 'Connections';
@@ -179,6 +180,8 @@ export default function Home() {
   const [view, setView] = useState<View>('Overview');
   const [marketMode, setMarketMode] = useState<MarketMode | null>(null);
   const marketModeRef = useRef<MarketMode | null>(null);
+  const [workspaceMode, setWorkspaceMode] = useState<'desk' | 'demo'>('desk');
+  const workspaceModeRef = useRef<'desk' | 'demo'>('desk');
   const refreshSequence = useRef(0);
   const [symbol, setSymbol] = useState('NVDA');
   const [busy, setBusy] = useState('');
@@ -199,6 +202,7 @@ export default function Home() {
   const [tableMode, setTableMode] = useState<'watchlist' | 'positions'>('watchlist');
   const [resetConfirm, setResetConfirm] = useState(false);
   const changeMarketMode = useCallback((mode: MarketMode) => {
+    if (workspaceModeRef.current === 'demo') mode = 'replay';
     marketModeRef.current = mode;
     mutationVersion.current += 1;
     refreshSequence.current += 1;
@@ -206,16 +210,24 @@ export default function Home() {
     setLoadError('');
   }, []);
   useEffect(() => {
-    const initial = setTimeout(() => changeMarketMode(new URLSearchParams(window.location.search).get('marketMode') === 'replay' ? 'replay' : 'yahoo'), 0);
+    const initial = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const workspace = params.get('demo') === '1' ? 'demo' : 'desk';
+      workspaceModeRef.current = workspace;
+      setWorkspaceMode(workspace);
+      if (workspace === 'demo') setSymbol('MSFT');
+      changeMarketMode(workspace === 'demo' || params.get('marketMode') === 'replay' ? 'replay' : 'yahoo');
+    }, 0);
     return () => clearTimeout(initial);
   }, [changeMarketMode]);
   const refresh = useCallback(async () => {
     const mode = marketModeRef.current;
+    const workspace = workspaceModeRef.current;
     if (busyRef.current || !mode) return;
     const version = mutationVersion.current, request = ++refreshSequence.current;
-    const isCurrent = () => mode === marketModeRef.current && request === refreshSequence.current && version === mutationVersion.current && !busyRef.current;
+    const isCurrent = () => workspace === workspaceModeRef.current && mode === marketModeRef.current && request === refreshSequence.current && version === mutationVersion.current && !busyRef.current;
     try {
-      const response = await fetch(`/api/desk?marketMode=${mode}`, { cache: 'no-store' });
+      const response = await fetch(`/api/desk?marketMode=${mode}&workspace=${workspace}`, { cache: 'no-store' });
       const result = await response.json() as DeskSnapshot & { error?: string };
       if (!response.ok) throw new Error(result.error || 'Unable to load the investment desk.');
       if (isCurrent()) { setSnapshot(result); setLoadError(''); }
@@ -251,24 +263,32 @@ export default function Home() {
   const run = useCallback(async (action: Action, pending?: string) => {
     if (busyRef.current) return;
     const mode = marketModeRef.current || 'yahoo';
+    const workspace = workspaceModeRef.current;
     busyRef.current = true; mutationVersion.current += 1; setBusy(action.action);
     if (pending) setToast({ message: pending, error: false });
     try {
-      const response = await fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...action, marketMode: mode }) });
+      const response = await fetch('/api/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...action, marketMode: mode, workspace }) });
       const result = await response.json() as { snapshot?: DeskSnapshot; message?: string; error?: string };
-      if (result.snapshot && mode === marketModeRef.current) setSnapshot(result.snapshot);
+      if (result.snapshot && workspace === workspaceModeRef.current && mode === marketModeRef.current) setSnapshot(result.snapshot);
       if (!response.ok || result.error) throw new Error(result.error || 'The action could not be completed.');
       setToast({ message: result.message || 'Your desk is up to date.', error: false });
       const next = result.snapshot as DeskSnapshot | undefined;
-      if (action.action === 'research' && next) { setResearchId(newest(next.state.research)[0]?.id || ''); setView('Research'); }
+      if ((action.action === 'research' || action.action === 'demo_sample') && next) { setResearchId(newest(next.state.research)[0]?.id || ''); setView('Research'); }
       if ((action.action === 'propose' || action.action === 'scenario') && next) { setOrderId(newest(next.state.orders)[0]?.id || ''); setOrderFilter('all'); setView('Orders'); setDemoOpen(false); }
       if (action.action === 'reset') { setOrderId(''); setResearchId(''); setResetConfirm(false); setView('Overview'); }
+      if (action.action === 'start_demo') { setOrderId(''); setResearchId(''); setSymbol('MSFT'); setView('Research'); setDemoOpen(false); setAuditQuery(''); setAuditFilter('all'); setExpandedEvent(''); }
     } catch (err) { setToast({ message: err instanceof Error ? err.message : 'Something went wrong. Please try again.', error: true }); }
     finally { busyRef.current = false; setBusy(''); if (mode !== marketModeRef.current) void refresh(); }
   }, [refresh]);
   const closeEvidence = useCallback(() => setEvidence(null), []);
   const navigate = (next: View) => { setView(next); setMobileNav(false); };
-  const exportAudit = () => { if (!snapshot) return; const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), environment: 'paper', marketFeed: snapshot.marketFeed, replayDate: snapshot.connections.replayDate, policy: snapshot.state.policy, audit: snapshot.state.audit, orders: snapshot.state.orders }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `mandate-audit-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); setToast({ message: 'Audit record exported as JSON.', error: false }); };
+  const demoNavigate = (next: View, id?: string) => {
+    if (next === 'Research') { setSymbol('MSFT'); setResearchId(id || ''); }
+    if (next === 'Orders') { setOrderId(id || ''); setOrderFilter('all'); }
+    if (next === 'Audit trail') { setAuditQuery(''); setAuditFilter('all'); }
+    navigate(next);
+  };
+  const exportAudit = () => { if (!snapshot) return; const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), environment: 'paper', workspace: snapshot.workspace || 'desk', marketFeed: snapshot.marketFeed, replayDate: snapshot.connections.replayDate, policy: snapshot.state.policy, audit: snapshot.state.audit, orders: snapshot.state.orders }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `mandate-audit-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); setToast({ message: 'Audit record exported as JSON.', error: false }); };
   const orders = useMemo(() => snapshot ? newest(snapshot.state.orders) : [], [snapshot]);
   const research = useMemo(() => snapshot ? newest(snapshot.state.research) : [], [snapshot]);
   const selectedResearch = research.find(item => item.id === researchId) || research.find(item => item.symbol === symbol);
@@ -291,11 +311,13 @@ export default function Home() {
   const audits = snapshot ? [...snapshot.state.audit].sort((a, b) => b.time.localeCompare(a.time)).filter(event => (auditFilter === 'all' || event.decision === auditFilter) && `${event.agent} ${event.tool} ${event.message} ${event.traceId}`.toLowerCase().includes(auditQuery.toLowerCase())) : [];
   const filteredOrders = orders.filter(o => orderFilter === 'all' || o.status === orderFilter);
   return <div className="app-shell">
-    <aside ref={sidebarRef} id="workspace-navigation" className={`sidebar ${mobileNav ? 'mobile-open' : ''}`} inert={Boolean(evidence) || (isMobile && !mobileNav)} aria-hidden={isMobile && !mobileNav ? true : undefined}><a className="brand" href="#" onClick={e => { e.preventDefault(); navigate('Overview'); }} aria-label="Mandate overview"><span className="brand-symbol"><i /><i /><i /></span><span>mandate<span className="brand-period">.</span></span></a><button className="nav-close icon-button" type="button" aria-label="Close navigation menu" onClick={() => setMobileNav(false)}><X size={20} /></button><div className="workspace-label"><span className="workspace-avatar">M</span><div>Investment desk<small>Research workspace</small></div><ChevronDown size={14} /></div><nav aria-label="Main navigation">{NAV.map(item => <button type="button" key={item.name} aria-label={item.name} title={item.name} className={`nav-item ${view === item.name ? 'active' : ''}`} onClick={() => navigate(item.name)} aria-current={view === item.name ? 'page' : undefined}><item.icon size={18} strokeWidth={1.7} /><span>{item.name}</span>{item.name === 'Orders' && pendingOrders.length > 0 && <span className="nav-count">{pendingOrders.length}</span>}</button>)}</nav><div className="sidebar-bottom"><div className="paper-status"><span className="status-dot" /><span>Paper environment</span><LockKeyhole size={12} /></div><p>{yahoo ? 'Yahoo Finance quotes.' : 'Synthetic market.'}<br />Real permission checks.</p><button className="sidebar-help" type="button" onClick={() => navigate('Connections')}><CircleHelp size={16} />Workspace setup<ArrowUpRight size={13} /></button><div className="profile"><span className="profile-avatar">PM</span><div>Portfolio manager<small>Reviewer access</small></div><ShieldCheck size={15} /></div></div></aside>
+    <aside ref={sidebarRef} id="workspace-navigation" className={`sidebar ${mobileNav ? 'mobile-open' : ''}`} inert={Boolean(evidence) || (isMobile && !mobileNav)} aria-hidden={isMobile && !mobileNav ? true : undefined}><a className="brand" href="#" onClick={e => { e.preventDefault(); navigate('Overview'); }} aria-label="Mandate overview"><span className="brand-symbol"><i /><i /><i /></span><span>mandate<span className="brand-period">.</span></span></a><button className="nav-close icon-button" type="button" aria-label="Close navigation menu" onClick={() => setMobileNav(false)}><X size={20} /></button><div className="workspace-label"><span className="workspace-avatar">M</span><div>{workspaceMode === 'demo' ? 'Presentation demo' : 'Investment desk'}<small>{workspaceMode === 'demo' ? 'Separate paper portfolio' : 'Research workspace'}</small></div><ChevronDown size={14} /></div><nav aria-label="Main navigation">{NAV.map(item => <button type="button" key={item.name} aria-label={item.name} title={item.name} className={`nav-item ${view === item.name ? 'active' : ''}`} onClick={() => navigate(item.name)} aria-current={view === item.name ? 'page' : undefined}><item.icon size={18} strokeWidth={1.7} /><span>{item.name}</span>{item.name === 'Orders' && pendingOrders.length > 0 && <span className="nav-count">{pendingOrders.length}</span>}</button>)}</nav><div className="sidebar-bottom"><div className="paper-status"><span className="status-dot" /><span>Paper environment</span><LockKeyhole size={12} /></div><p>{yahoo ? 'Yahoo Finance quotes.' : 'Synthetic market.'}<br />Real permission checks.</p><button className="sidebar-help" type="button" onClick={() => navigate('Connections')}><CircleHelp size={16} />Workspace setup<ArrowUpRight size={13} /></button><div className="profile"><span className="profile-avatar">PM</span><div>Portfolio manager<small>Reviewer access</small></div><ShieldCheck size={15} /></div></div></aside>
     {mobileNav && <button className="nav-scrim" type="button" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
-    <div className="main-shell" inert={Boolean(evidence) || (isMobile && mobileNav)}><header className="topbar"><div className="breadcrumb"><button type="button" className="icon-button mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation" aria-controls="workspace-navigation" aria-expanded={mobileNav}><span className={`menu-glyph ${mobileNav ? 'open' : ''}`} aria-hidden="true"><i /><i /></span></button><span>Workspace</span><ChevronRight size={13} /><strong>{view}</strong></div><div className="topbar-right"><label className="market-mode-control"><span className="sr-only">Market data source</span><select aria-label="Market data source" value={marketMode || 'yahoo'} disabled={!!busy} onChange={event => changeMarketMode(event.target.value as MarketMode)}><option value="yahoo">Yahoo Finance</option><option value="replay">Synthetic replay</option></select><ChevronDown size={13} aria-hidden="true" /></label><button type="button" className={`icon-button ${busy ? 'muted' : ''}`} onClick={() => void refresh()} disabled={!!busy} aria-label="Refresh desk"><RefreshCw size={15} className={busy ? 'spin' : ''} /></button><span className="top-avatar">PM</span></div></header>
-    <main id="main-content"><div className="page-heading"><div><h1 ref={headingRef} tabIndex={-1}>{titles[view]}</h1><p>{descriptions[view]}</p></div><div className="heading-actions"><button type="button" className={`button secondary ${demoOpen ? 'pressed' : ''}`} onClick={() => setDemoOpen(!demoOpen)} aria-expanded={demoOpen}><FlaskConical size={15} />Run failure demo<ChevronDown size={13} /></button>{view === 'Overview' && <button type="button" className="button primary" onClick={() => { setResearchId(''); navigate('Research'); }}>New research<span className="button-icon"><ArrowUpRight size={16} /></span></button>}{view === 'Audit trail' && <button type="button" className="button primary" onClick={exportAudit} disabled={!snapshot}><Download size={15} />Export audit</button>}</div></div>
+    <div className="main-shell" inert={Boolean(evidence) || (isMobile && mobileNav)}><header className="topbar"><div className="breadcrumb"><button type="button" className="icon-button mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation" aria-controls="workspace-navigation" aria-expanded={mobileNav}><span className={`menu-glyph ${mobileNav ? 'open' : ''}`} aria-hidden="true"><i /><i /></span></button><span>Workspace</span><ChevronRight size={13} /><strong>{view}</strong></div><div className="topbar-right"><label className="market-mode-control"><span className="sr-only">Market data source</span><select aria-label="Market data source" value={marketMode || 'yahoo'} disabled={!!busy || workspaceMode === 'demo'} onChange={event => changeMarketMode(event.target.value as MarketMode)}><option value="yahoo">Yahoo Finance</option><option value="replay">Synthetic replay</option></select><ChevronDown size={13} aria-hidden="true" /></label><button type="button" className={`icon-button ${busy ? 'muted' : ''}`} onClick={() => void refresh()} disabled={!!busy} aria-label="Refresh desk"><RefreshCw size={15} className={busy ? 'spin' : ''} /></button><span className="top-avatar">PM</span></div></header>
+    {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Demo entry fully reloads to initialize its isolated workspace. */}
+    <main id="main-content"><div className="page-heading"><div><h1 ref={headingRef} tabIndex={-1}>{titles[view]}</h1><p>{descriptions[view]}</p></div>{workspaceMode === 'desk' && <div className="heading-actions">{workspaceMode === 'desk' && <a className="button secondary" href="/?demo=1"><FlaskConical size={15} />Guided demo</a>}<button type="button" className={`button secondary ${demoOpen ? 'pressed' : ''}`} onClick={() => setDemoOpen(!demoOpen)} aria-expanded={demoOpen}><FlaskConical size={15} />Run failure demo<ChevronDown size={13} /></button>{view === 'Overview' && <button type="button" className="button primary" onClick={() => { setResearchId(''); navigate('Research'); }}>New research<span className="button-icon"><ArrowUpRight size={16} /></span></button>}{view === 'Audit trail' && <button type="button" className="button primary" onClick={exportAudit} disabled={!snapshot}><Download size={15} />Export audit</button>}</div>}</div>
     {loadError && <div className="connection-error" role="alert"><XCircle size={17} /><span>{loadError}{snapshot && ` Your last loaded ${displayMode === 'yahoo' ? 'Yahoo Finance' : 'synthetic replay'} desk is still visible.`}</span><button type="button" onClick={() => void refresh()}>Retry</button></div>}
+    {workspaceMode === 'demo' && snapshot?.workspace === 'demo' && <DemoGuide snapshot={snapshot} busy={loadError ? 'loading' : busy} error={loadError || (toast?.error ? toast.message : undefined)} run={run} navigate={demoNavigate} openEvidence={setEvidence} exportAudit={exportAudit} />}
     {snapshot && <div className={`market-feed-status ${snapshot.marketFeed?.status || 'ok'}`} role="status"><span><span className="status-dot" />{marketPending ? `${loadError ? 'Could not load' : 'Loading'} ${marketMode === 'yahoo' ? 'Yahoo Finance' : 'synthetic replay'}${loadError ? '.' : '…'} Displaying the last loaded ${yahoo ? 'Yahoo' : 'replay'} prices.` : yahoo ? snapshot.marketFeed?.message || 'Yahoo Finance quotes' : `Synthetic replay · ${date(snapshot.connections.replayDate)}`}</span><span>{lastChecked ? `Last checked ${marketTime(lastChecked)}` : 'Awaiting market data'}</span></div>}
     {demoOpen && <section className="demo-panel"><div><h2>Put the permission boundary to work.</h2><p>Each scenario requests a paper action that should be stopped and recorded.</p></div><div className="scenario-buttons">{[{ id: 'oversize', name: 'Oversized order', detail: 'Exceeds the order limit' }, { id: 'unauthorized', name: 'Unauthorized agent', detail: 'Research role tries to execute' }, { id: 'stale', name: 'Stale quote', detail: 'Price fails freshness check' }, { id: 'tamper', name: 'Changed order', detail: 'Order differs from its approval' }, { id: 'unsupported', name: 'Unsupported claim', detail: 'Evidence cannot support the thesis' }].map(s => <button type="button" key={s.id} disabled={!!busy} onClick={() => void run({ action: 'scenario', scenario: s.id }, 'Running permission checks…')}><span>{s.name}<small>{s.detail}</small></span><ArrowRight size={15} /></button>)}</div></section>}
     {!snapshot ? <div className="loading-desk"><span className="loading-mark"><Layers3 size={24} /></span><h2>{loadError ? 'The desk is temporarily unavailable.' : 'Opening your investment desk…'}</h2><p>{loadError ? 'Retry the connection to load your portfolio and research.' : 'Loading the portfolio, source evidence, and order ledger.'}</p>{!loadError && <Loader2 className="spin muted" size={19} />}</div> : <div className="view-content" key={view} aria-busy={!!busy}>
