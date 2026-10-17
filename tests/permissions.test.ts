@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EVIDENCE, marketSnapshot, seededState } from '../lib/fixtures.ts';
-import { applyFill, canonicalSample, evaluateOrder, fingerprintOrder, portfolioValue, toolPermission } from '../lib/permissions.ts';
+import { approvalRequired, applyFill, canonicalSample, evaluateOrder, fingerprintOrder, portfolioValue, toolPermission } from '../lib/permissions.ts';
 import type { Order } from '../lib/types.ts';
 
 const now=Date.parse('2026-10-17T15:00:00Z');
@@ -9,6 +9,7 @@ function setup(){const state=seededState(now);const market=marketSnapshot(now);c
 function failed(key:string,update:(s:ReturnType<typeof setup>)=>void){const s=setup();update(s);assert.equal(evaluateOrder(s.order,s.state,s.market,EVIDENCE,now).find(c=>c.key===key)?.passed,false,key+' should fail');}
 
 test('valid sourced paper order passes objective mandate rules',()=>{const s=setup();assert.ok(evaluateOrder(s.order,s.state,s.market,EVIDENCE,now).every(c=>c.passed));});
+test('price movement across the approval threshold requires human authorization at execution',()=>{const {state,order}=setup();state.policy.requireApproval=false;state.policy.approvalAbove=1810;order.quantity=10;order.price=180.45;order.notional=1804.5;assert.equal(approvalRequired(order,state),false);assert.equal(approvalRequired(order,state,181.10),true);});
 test('research agent cannot execute orders, unknown agents default deny',()=>{assert.equal(toolPermission('research-agent','orders.execute').passed,false);assert.equal(toolPermission('rogue','orders.execute').passed,false);assert.equal(toolPermission('execution-agent','orders.execute').passed,true);});
 test('oversized order cannot pass even with sufficient cash',()=>failed('notional',s=>{s.order.quantity=100;}));
 test('restricted security is denied',()=>failed('allowlist',s=>{s.state.policy.allowedSymbols=['AAPL'];}));

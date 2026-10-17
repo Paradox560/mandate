@@ -53,7 +53,7 @@ export function evaluateOrder(order:Order,state:DeskState,market:Quote[],evidenc
   return checks;
 }
 
-export function approvalRequired(order:Order,state:DeskState):boolean{return state.policy.requireApproval||order.notional>=state.policy.approvalAbove;}
+export function approvalRequired(order:Order,state:DeskState,executionPrice=order.price):boolean{return state.policy.requireApproval||executionPrice*order.quantity>=state.policy.approvalAbove;}
 
 export function applyFill(state:DeskState,order:Order,quote:Quote,now=Date.now()):void {
   if(order.status==='executed'||order.fill)throw new Error('This order has already executed.');
