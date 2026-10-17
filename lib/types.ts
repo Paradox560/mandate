@@ -1,0 +1,13 @@
+export type SymbolCode = 'NVDA' | 'MSFT' | 'AAPL' | 'GOOGL' | 'AMZN' | 'META';
+export type Quote = {symbol:SymbolCode;name:string;sector:string;price:number;previousClose:number;change:number;history:number[];timestamp:string};
+export type Evidence = {id:string;symbol:string;title:string;url:string;publishedAt:string;period:string;text:string;metrics:Record<string,number>};
+export type Claim = {text:string;evidenceIds:string[];supported:boolean};
+export type Research = {id:string;symbol:string;title:string;summary:string;claims:Claim[];risks:string[];evidenceIds:string[];score:number;createdAt:string;mode:'nicrron'|'sample';model:string;recommendation:{side:'buy'|'sell';quantity:number;rationale:string};traceId:string};
+export type Check = {key:string;label:string;passed:boolean;reason:string};
+export type Order = {id:string;researchId:string;symbol:string;side:'buy'|'sell';quantity:number;price:number;notional:number;status:'blocked'|'review'|'approved'|'executed'|'rejected';checks:Check[];evidenceIds:string[];createdAt:string;traceId:string;fingerprint:string;approval?:{fingerprint:string;portfolioVersion:number;policyVersion:number;approvedAt:string};fill?:{price:number;quantity:number;time:string};scenario?:string};
+export type AuditEvent = {id:string;time:string;agent:string;tool:string;decision:'allowed'|'blocked'|'review'|'error';message:string;traceId:string;orderId?:string;details?:Record<string,unknown>};
+export type Policy = {version:number;maxOrderValue:number;maxPositionWeight:number;approvalAbove:number;allowedSymbols:string[];maxQuoteAgeSeconds:number;maxEvidenceAgeDays:number;requireApproval:boolean};
+export type DeskState = {version:number;portfolioVersion:number;cash:number;positions:{symbol:string;shares:number;costBasis:number}[];research:Research[];orders:Order[];audit:AuditEvent[];policy:Policy;createdAt:string;integration:{prismLastStatus:string;prismLastTraceId?:string;knowledgeBaseSynced:boolean}};
+export type Connections = {nicrron:{configured:boolean;model:string};prism:{configured:boolean;enforce:boolean;projectId:string|null};mode:'paper';replayDate:string};
+export type DeskSnapshot = {state:DeskState;market:Quote[];evidence:Evidence[];connections:Connections};
+export type Action = {action:string;symbol?:string;prompt?:string;researchId?:string;quantity?:number;side?:'buy'|'sell';orderId?:string;policy?:Partial<Policy>;scenario?:string};

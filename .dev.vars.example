@@ -1,0 +1,8 @@
+# Copy to .dev.vars. Never commit the populated file.
+NICRRON_API_KEY=
+NICRRON_MODEL=openai/gpt-4o-mini
+PRISM_API_KEY=
+PRISM_PROJECT_ID=
+PRISM_AGENT_ID=mandate-research
+# Optional: after configuring a PRISM enforce-mode guardrail, set true.
+PRISM_ENFORCE=false
