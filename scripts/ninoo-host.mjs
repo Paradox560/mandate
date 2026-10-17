@@ -21,11 +21,13 @@ if (!executable) {
 
 const environmentFile = fileURLToPath(new URL('../.env.ninoo.local', import.meta.url));
 const runner = fileURLToPath(new URL('./run-ninoo.mjs', import.meta.url));
+const stagedServer = fileURLToPath(new URL('../.ninoo/server/server.js', import.meta.url));
+const startStaged = command === 'start' && existsSync(stagedServer);
 const args = [
   ...(existsSync(environmentFile) ? [`--env-file=${environmentFile}`] : []),
-  runner, command, ...forwardedArgs,
+  ...(startStaged ? [stagedServer, ...forwardedArgs] : [runner, command, ...forwardedArgs]),
 ];
-const child = spawn(executable, args, {cwd: root, env: process.env, stdio: 'inherit'});
+const child = spawn(executable, args, {cwd: root, env: {...process.env, MANDATE_RUNTIME: 'node'}, stdio: 'inherit'});
 const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 const handlers = new Map(signals.map(signal => [signal, () => child.kill(signal)]));
 for (const [signal, handler] of handlers) process.on(signal, handler);

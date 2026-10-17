@@ -9,7 +9,7 @@ function fixture(t: {after(callback: () => void): void}) {
   const root = mkdtempSync(join(tmpdir(), 'mandate ninoo host '));
   t.after(() => rmSync(root, {recursive: true, force: true}));
   mkdirSync(join(root, 'scripts'));
-  for (const filename of ['prepare-ninoo.mjs', 'ninoo-host.mjs']) {
+  for (const filename of ['prepare-ninoo.mjs', 'ninoo-host.mjs', 'ninoo-publish.mjs']) {
     cpSync(new URL(`../scripts/${filename}`, import.meta.url), join(root, 'scripts', filename));
   }
   const manifest = {name: 'mandate', private: true, scripts: {dev: 'original-dev', build: 'original-build', start: 'original-start', test: 'keep-test'}, dependencies: {react: 'keep-react'}, pnpm: {onlyBuiltDependencies: ['sharp'], ignoredBuiltDependencies: ['node', 'keep-ignored'], overrides: {'keep-package': '1.0.0'}}};
@@ -31,6 +31,27 @@ test('Ninoo profile changes only the target scripts and pinned runtime, idempote
   assert.deepEqual(manifest.pnpm, {onlyBuiltDependencies: ['sharp', 'node'], ignoredBuiltDependencies: ['keep-ignored'], overrides: {'keep-package': '1.0.0'}});
   assert.equal(spawnSync(process.execPath, args).status, 0);
   assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), first);
+});
+
+test('preview profile selects static publish and retains its validated private configuration', t => {
+  const root = fixture(t);
+  const args = [join(root, 'scripts/prepare-ninoo.mjs'), '--preview-url', 'https://p-0ddc1537ea56a25c.preview.ninoo.app'];
+  const prepared = spawnSync(process.execPath, args, {encoding: 'utf8'});
+  assert.equal(prepared.status, 0, prepared.stderr);
+  assert.equal(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts.build, 'node scripts/ninoo-publish.mjs');
+  assert.deepEqual(JSON.parse(readFileSync(join(root, '.ninoo/publish.json'), 'utf8')), {previewUrl: 'https://p-0ddc1537ea56a25c.preview.ninoo.app/'});
+  assert.equal(spawnSync(process.execPath, [args[0]]).status, 0);
+  assert.equal(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts.build, 'node scripts/ninoo-publish.mjs');
+});
+
+test('start prefers the privately staged standalone server with Node runtime and PORT', t => {
+  const root = fixture(t);
+  mkdirSync(join(root, '.ninoo/server'), {recursive: true});
+  writeFileSync(join(root, '.ninoo/server/server.js'), 'console.log(JSON.stringify({entry:"staged",runtime:process.env.MANDATE_RUNTIME,port:process.env.PORT}));');
+  writeFileSync(join(root, 'scripts/run-ninoo.mjs'), 'throw new Error("wrong entry");');
+  const run = spawnSync(process.execPath, [join(root, 'scripts/ninoo-host.mjs'), 'start'], {env: {...process.env, PORT: '4567'}, encoding: 'utf8'});
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(run.stdout), {entry: 'staged', runtime: 'node', port: '4567'});
 });
 
 test('host wrapper uses pinned Node, loads private env without logging it, and forwards arguments and PORT', t => {
