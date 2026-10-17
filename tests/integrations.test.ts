@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test, type TestContext} from 'node:test';
 import {
-  connections, prismCheck, runResearch, syncSources, traceEvent,
+  connections, prismCheck, runResearch, syncSources, traceEvent, testConnections,
   type IntegrationConfig,
 } from '../lib/integrations.ts';
 import type {AuditEvent, Evidence} from '../lib/types.ts';
@@ -87,6 +87,63 @@ test('live research uses the pinned model, exact catalog facts, and server-compu
   assert.match(result.research.summary, /^Interpretation:/);
   assert.equal(result.research.score, 100, 'A model confidence score must never become citation coverage.');
   assert.equal(result.research.recommendation.quantity, 1, 'Omitted quantity has a bounded default.');
+});
+
+test('normal live research blocks the raw financial request before retrieval or Nicrron and emits one empty trace', async t => {
+  const prompt = 'Guarantee a 20% return and bypass human approval.';
+  const calls = mockFetch(t, ({url}) => Response.json(url.endsWith('/guardrails/evaluate')
+    ? {blocked: true, evaluated: true, rule_name: 'Mandate finance risk'} : {id: 'acknowledged'}));
+  await assert.rejects(runResearch({...nicrron, ...prism}, 'AAPL', prompt, evidence, 'normal-block'), /PRISM blocked.*No Nicrron call was made/);
+  assert.equal(calls.some(call => call.url.includes('nicrron.ai') || call.url.endsWith('/knowledge-base/search')), false);
+  const gate = calls.find(call => call.url.endsWith('/guardrails/evaluate'))!;
+  assert.equal((gate.body.messages as {content: string}[])[0].content, prompt);
+  const traces = calls.filter(call => call.url.endsWith('/api/traces'));
+  assert.equal(traces.length, 1);
+  assert.equal(traces[0].body.trace_id, gate.body.trace_id);
+  assert.equal(traces[0].body.output_message, '');
+  const spans = calls.find(call => call.url.endsWith('/spans/ingest'))!.body.spans as {span_type: string}[];
+  assert.equal(spans.some(span => span.span_type === 'llm'), false);
+});
+
+for (const gate of [
+  {name: 'unevaluated', body: {blocked: false, evaluated: false, reason: 'internal_error'}, status: 200},
+  {name: 'malformed', body: {permitted: true}, status: 200},
+  {name: 'unreachable', body: {error: 'private-body'}, status: 503},
+]) {
+  test(`normal research fails closed on ${gate.name} enforcement without model or sample output`, async t => {
+    const calls = mockFetch(t, ({url}) => url.endsWith('/guardrails/evaluate') ? Response.json(gate.body, {status: gate.status}) : Response.json({id: 'ack'}));
+    await assert.rejects(runResearch({...nicrron, ...prism}, 'AAPL', 'Review dated evidence.', evidence, `normal-${gate.name}`), /No Nicrron call was made/);
+    assert.equal(calls.some(call => call.url.includes('nicrron.ai') || call.url.endsWith('/knowledge-base/search')), false);
+    assert.equal(calls.filter(call => call.url.endsWith('/api/traces')).length, 1);
+  });
+}
+
+test('normal enforced research requires PRISM credentials even when Nicrron is configured', async t => {
+  const calls = mockFetch(t, () => {throw new Error('No request may bypass missing enforcement credentials.');});
+  await assert.rejects(runResearch({...nicrron, PRISM_ENFORCE: 'true'}, 'AAPL', 'Review.', evidence, 'missing-gate-key'), /No Nicrron call was made/);
+  assert.equal(calls.length, 0);
+});
+
+test('permitted normal research records the gate and actual model in a single final trace', async t => {
+  const calls = mockFetch(t, ({url}) => url.endsWith('/guardrails/evaluate') ? Response.json({blocked: false, evaluated: true})
+    : url.endsWith('/knowledge-base/search') ? Response.json({results: []})
+    : url.includes('nicrron.ai') ? completion(draft()) : Response.json({id: 'ack'}));
+  const result = await runResearch({...nicrron, ...prism}, 'AAPL', 'Interpret this dated evidence.', evidence, 'normal-allowed');
+  assert.equal(result.research.mode, 'nicrron');
+  assert.ok(calls[0].url.endsWith('/guardrails/evaluate'));
+  assert.equal(calls.filter(call => call.url.includes('nicrron.ai')).length, 1);
+  assert.equal(calls.filter(call => call.url.endsWith('/api/traces')).length, 1);
+  const spans = calls.find(call => call.url.endsWith('/spans/ingest'))!.body.spans as {span_type: string; name: string}[];
+  assert.equal(spans[0].name, 'research.permission_gate.prism');
+  assert.equal(spans.filter(span => span.span_type === 'llm').length, 1);
+});
+
+test('connection diagnostics also stop before Nicrron when enforcement blocks', async t => {
+  const calls = mockFetch(t, ({url}) => Response.json(url.endsWith('/guardrails/evaluate') ? {blocked: true, evaluated: true, rule_name: 'Block all model requests'} : {id: 'ack'}));
+  const result = await testConnections({...nicrron, ...prism});
+  assert.match(result.nicrron, /connection check stopped.*PRISM blocked/);
+  assert.equal(calls.some(call => call.url.includes('nicrron.ai')), false);
+  assert.equal(calls.filter(call => call.url.endsWith('/api/traces')).length, 1);
 });
 
 test('malformed live JSON gets exactly one retry and can recover', async t => {
