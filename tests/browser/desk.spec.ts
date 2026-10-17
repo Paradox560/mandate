@@ -14,7 +14,7 @@ const screens = [
 ] as const;
 
 async function openDesk(page: Page) {
-  await page.goto('/');
+  await page.goto('/?marketMode=replay');
   // The page heading exists in server HTML before React hydrates. Awaiting real
   // portfolio data prevents navigation clicks from disappearing during hydration.
   await expect(page.getByRole('region', { name: 'Portfolio summary' })).toBeVisible();
@@ -27,7 +27,7 @@ async function navigate(page: Page, name: string, heading: string) {
 }
 
 async function readSnapshot(page: Page): Promise<DeskSnapshot> {
-  const response = await page.request.get('/api/desk');
+  const response = await page.request.get('/api/desk?marketMode=replay');
   expect(response.ok()).toBeTruthy();
   return await response.json() as DeskSnapshot;
 }

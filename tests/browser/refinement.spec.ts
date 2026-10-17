@@ -18,7 +18,7 @@ test.afterEach(async ({ page }) => {
 });
 
 async function openDesk(page: Page) {
-  await page.goto('/');
+  await page.goto('/?marketMode=replay');
   // Wait for real portfolio data, rather than clicking server-rendered controls
   // before hydration has attached their event handlers.
   await expect(page.getByRole('region', { name: 'Portfolio summary' })).toBeVisible();

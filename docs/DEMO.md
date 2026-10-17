@@ -4,7 +4,9 @@ This document separates recorded build-session checks from the proof still neede
 
 ## Explain the clocks first
 
-The app is a paper desk with synthetic, deterministic prices. Market timestamps identify when the simulation generated a quote, not when an exchange published it. Each chart contains 96 five-minute simulated observations. Daily change is calculated against the previous synthetic UTC-day close. It is not a backtest, portfolio return or actual price history.
+The app is a paper desk. Its default Yahoo Finance view shows actual provider timestamps and five-minute bars from the latest available regular session, with a separate last-checked time. Quotes refresh every minute but can be delayed or unavailable. Closed markets show the previous session. The research corpus remains historical; current prices do not refresh its sources.
+
+Select **Synthetic replay** in the header (or open `/?marketMode=replay`) for the workflow below. In this mode, timestamps identify when the simulation generated a quote, not when an exchange published it. Each chart contains 96 five-minute simulated observations. Daily change is calculated against the previous synthetic UTC-day close. It is not a backtest, portfolio return or actual price history.
 
 Issuer disclosures are historical and assessed as of **August 29, 2025**. The date of a newly created report or order is the real current time; it does not refresh its sources. The seed portfolio starts with $126,579.40 cash, 100 MSFT shares, 220 NVDA shares and 140 AAPL shares. Its roughly $250,000 marked value moves with the simulation. Cost bases are illustrative bookkeeping inputs.
 
@@ -12,7 +14,7 @@ Two reports and one blocked order are clearly labeled samples. Their `seed-*` ID
 
 ## Product walkthrough
 
-1. Open the desk and identify the synthetic-market and historical-evidence labels. Read the cash balance, holdings and mandate.
+1. Open the desk, select **Synthetic replay**, and identify the synthetic-market and historical-evidence labels. Read the cash balance, holdings and mandate.
 2. Open NVIDIA's sample research and follow both original issuer citations. Show the publication date, reporting period and supported claims.
 3. Run new research with configured Nicrron credentials. Inspect the returned mode and model; if the request fails, show the error or explicitly labeled sample behavior.
 4. Propose an oversized order. Show its failed notional check and confirm cash, holdings and fills did not change. The seeded order is a visual example only; create a new proposal for live proof.
@@ -22,11 +24,13 @@ Two reports and one blocked order are clearly labeled samples. Their `seed-*` ID
 
 ## Local safeguards to verify
 
-`evaluateOrder` contains nine distinct checks: parameter validity, allowed symbol, quote freshness, price drift, notional, cash/inventory, concentration, source linkage and evidence age. Capability authorization, approval requirements, fingerprint/version binding and duplicate-fill prevention are additional execution controls. Do not count each UI badge or repeated check as a separate integration.
+`evaluateOrder` checks parameter validity, bound market source, allowed symbol, quote freshness, price drift, notional, cash/inventory, concentration, source linkage and evidence age. Yahoo orders additionally require an open regular session and fresh prices for every holding. Capability authorization, approval requirements, fingerprint/version binding and duplicate-fill prevention are additional execution controls. Do not count each UI badge or repeated check as a separate integration.
 
 These are intended code behaviors to verify with the implementation's checks. A fixture with `status: blocked` does not prove any enforcement path ran. A local role name is not production authentication.
 
 ## Recorded checks — October 17, 2026
+
+The subsequent Yahoo/logos update passed **68 unit tests** and **16 browser tests in 44.2 seconds**, including real PRISM-enforced replay execution and an oversized-order block. Three new read-only browser cases use mocked market responses to verify dated bars, six decoded company images, missing prices and source-switch races. Current Yahoo prices were separately read from the provider; Saturday observations carry Friday October 16 market timestamps. See [market-data behavior and limits](MARKET-DATA.md).
 
 - **47 unit tests passed**, TypeScript checking passed, and the Desktop production build/setup passed.
 - **7 Playwright tests passed in 30.2 seconds**, including a real PRISM-enforced MSFT buy-one proposal, approval and execution with exactly one fill, plus an oversized order denied without changing the ledger.

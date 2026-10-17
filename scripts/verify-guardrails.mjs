@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 
 const base = process.env.MANDATE_URL || 'http://127.0.0.1:5187';
-const initial = await (await fetch(`${base}/api/desk`)).json();
+const initial = await (await fetch(`${base}/api/desk?marketMode=replay`)).json();
 assert.equal(initial.connections?.prism.enforce, true, 'Enable PRISM_ENFORCE before testing the remote block.');
 const receipts = [];
 for (let run = 1; run <= 3; run++) {
-  const before = await (await fetch(`${base}/api/desk`)).json();
+  const before = await (await fetch(`${base}/api/desk?marketMode=replay`)).json();
   const response = await fetch(`${base}/api/action`, {
     method: 'POST', headers: {'Content-Type': 'application/json', Origin: base},
-    body: JSON.stringify({action: 'scenario', scenario: 'oversize'}),
+    body: JSON.stringify({action: 'scenario', scenario: 'oversize', marketMode: 'replay'}),
   });
   const result = await response.json();
   assert.ok(response.ok, result.error || 'Blocked-run request failed.');

@@ -2,7 +2,7 @@
 
 Evidence-linked approvals for AI-generated equity orders, built for small public-equity funds. Mandate carries a research note's sources into a proposed order, checks the investment mandate, records approval of the exact proposal and writes an auditable paper fill.
 
-**Paper trading only.** All prices, chart history and portfolio balances are simulated. Five evidence records come from three historical issuer releases and use an explicit **August 29, 2025** research date. Current timestamps describe application activity and quote generation; they do not make the market or disclosures live. There is no broker connection or real-money execution.
+**Paper trading only.** The default Yahoo Finance view uses actual provider quotes and five-minute bars, refreshes every minute and displays their market timestamps. Data can be delayed; closed markets show the last available session. Select **Synthetic replay** for the historical permission demo. Holdings, cash and cost bases are demonstration balances. Five evidence records come from three historical issuer releases with an **August 29, 2025** research date; those old sources cannot authorize current-date Yahoo orders. There is no broker connection or real-money execution. See [market data and permissions](docs/MARKET-DATA.md).
 
 For MONEY TALKS 2, Mandate's primary track is **Trust & Risk**, with **Money Intelligence** as a secondary fit. See the [three-track YC startup shortlist](docs/YC-STARTUPS.md).
 
@@ -19,6 +19,8 @@ npm run dev -- --port 5187
 `setup` creates `.dev.vars` from the empty example only if it is missing, builds the application and applies local D1 migrations. Fill the server-side credentials in `.dev.vars` before testing providers; preserve an existing populated file. Open [the local desk](http://127.0.0.1:5187). Local database state persists under `.wrangler/state`.
 
 The app provides clearly labeled sample research without provider credentials. Live research requires `NICRRON_API_KEY`; PRISM requires `PRISM_API_KEY` and `PRISM_PROJECT_ID`. Set `PRISM_ENFORCE=true` with a configured, working guardrail. Enforcement denies dependent work when evaluation fails or is unavailable. The empty example defaults to `false`; the verified demonstration environment uses `true`. See [integration contracts and setup](docs/INTEGRATIONS.md).
+
+Yahoo prices need no API key. The six company logos are already cached in `public/logos`; `npm run logos:sync` uses `TWELVE_DATA_API_KEY` from `.dev.vars` only for missing assets. Loading the application makes no logo API calls. Never commit `.dev.vars`. See [logo provenance and refresh](docs/LOGOS.md).
 
 After changes, `npm run build` produces the Worker build. `npm start` serves that build through local Wrangler; it does not publish a deployment. The stack is React, TypeScript, Vinext, Cloudflare Workers and D1.
 
@@ -46,7 +48,7 @@ The guardrail script requires enforcement, creates three actual oversized-order 
 
 ## Recorded integration verification
 
-The latest interface verification passed **47 unit tests**, **12 Playwright tests** (38.8 seconds), ESLint and TypeScript checking. The browser suite includes the seven research/order/blocked-workflow checks plus five interaction checks for keyboard charts, selected states, mobile focus and drawer motion. Workflow coverage includes a live, PRISM-enforced MSFT buy-one proposal → approval → execution with exactly one fill and an oversized order denied with an unchanged ledger. See the [UI refinement record](docs/UI-REFINEMENT.md) for screenshot coverage, final targeted polish verification and diagnostic limits. These are build-session results, not ongoing monitoring.
+The market-data update passed **68 unit tests**, **16 Playwright tests** (44.2 seconds), and TypeScript checking. Browser coverage includes source selection, dated bars, all six logo assets, missing-price valuation and late-response handling, plus the existing chart, mobile navigation and evidence drawer interactions. Workflow coverage includes a live, PRISM-enforced replay MSFT buy-one proposal → approval → execution with exactly one fill and an oversized order denied with an unchanged ledger. See the [market-data record](docs/MARKET-DATA.md) and earlier [UI refinement record](docs/UI-REFINEMENT.md). These are build-session results, not ongoing monitoring.
 
 On **October 17, 2026**, the build session verified live Nicrron and PRISM provider requests. A real PRISM custom rule, **Mandate blocked order**, blocked an oversized-order scenario with enforcement enabled. The portfolio revision remained **2**, with trace ID `80288ef5-24af-49be-a081-aa7db80cd4ba`. This is one recorded blocking check, not proof of every hackathon requirement.
 
@@ -58,6 +60,8 @@ The permission layer checks quantity and side, symbol allowlist, quote freshness
 - [YC startup shortlist for all three tracks](docs/YC-STARTUPS.md)
 - [YC thesis: Hudson Labs research + Alter permissions](docs/YC-THESIS.md)
 - [Integration setup and remote enforcement semantics](docs/INTEGRATIONS.md)
+- [Market data sources, timestamps and permissions](docs/MARKET-DATA.md)
+- [Company logo provenance and refresh](docs/LOGOS.md)
 - [Demo, source links and proof checklist](docs/DEMO.md)
 - [Design tokens and interface guidance](DESIGN.md)
 
