@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import {beforeEach,test,mock} from 'node:test';
+import {register} from 'node:module';
+import {seededState} from '../lib/fixtures.ts';
+import {migrateYahooState} from '../lib/yahoo-migration.ts';
+import type {DeskState,Evidence,Quote,Order} from '../lib/types.ts';
+register(new URL('./helpers/desk-loader.mjs',import.meta.url));
+const {act,processQueuedOrders,processAllQueuedOrders,snapshot}=await import('../lib/desk.ts');
+let clock=Date.parse('2026-10-17T15:00:00Z');
+const rows=new Map<string,DeskState>();let failCAS=false;
+let market:Quote[]=[];let latest='2026-10-16';let denyHistory=false;
+const harness=globalThis as typeof globalThis & {__mandateDemoTestStore:{read(key:string):Promise<DeskState>;save(key:string,state:DeskState,expected:number):Promise<void>;keys():Promise<string[]>};__mandateTestMarket:()=>unknown;__mandateTestHistory:(symbol:string,strategyId:string,asOf?:string)=>unknown};
+harness.__mandateDemoTestStore={async read(key){if(!rows.has(key))rows.set(key,seededState(clock));return structuredClone(rows.get(key)!);},async save(key,state,expected){if(failCAS||rows.get(key)?.version!==expected)throw new Error('Workspace changed in another request.');state.version=expected+1;rows.set(key,structuredClone(state));},async keys(){return [...rows.keys()].filter(key=>rows.get(key)!.orders.some(order=>order.status==='queued'));}};
+harness.__mandateTestMarket=()=>({market:structuredClone(market),marketFeed:{mode:'yahoo',provider:'Yahoo Finance',fetchedAt:new Date(clock).toISOString(),status:'ok',message:'Test observations',refreshSeconds:60,errors:[]}});
+harness.__mandateTestHistory=(symbol,strategyId,requested)=>{if(denyHistory)throw new Error('Unavailable');const asOf=requested??latest;const evidence:Evidence={id:`yahoo-history-${symbol}-${asOf}-${strategyId}`,symbol,title:'Yahoo historical calculation',url:`https://finance.yahoo.com/quote/${symbol}/history/`,publishedAt:asOf+'T13:30:00Z',period:asOf,text:`${symbol} historical strategy through ${asOf}.`,metrics:{},provenance:{provider:'yahoo',kind:'historical-strategy',symbol,strategyId,asOf,latestAvailableDate:latest,retrievedAt:new Date(clock).toISOString()}};return {symbol,strategy:{id:strategyId,name:'Historical strategy'},asOf,latestAvailableDate:latest,evidence,signal:{side:'buy',explanation:'Historical long signal'}};};
+function quoted(state:'open'|'closed'='closed',price=100,timestamp=clock){return {symbol:'MSFT' as const,name:'Microsoft',sector:'Technology',price,previousClose:99,change:1,history:[price],timestamp:new Date(timestamp).toISOString(),fetchedAt:new Date(clock).toISOString(),source:'yahoo' as const,marketState:state,stale:false};}
+mock.method(Date,'now',()=>clock);
+beforeEach(()=>{rows.clear();clock=Date.parse('2026-10-17T15:00:00Z');market=[quoted('closed',100,Date.parse('2026-10-16T20:00:00Z'))];latest='2026-10-16';denyHistory=false;failCAS=false;});
+async function proposal(user='owner-a',quantity=1){const research=await act(user,{}, {action:'strategy_research',symbol:'MSFT',strategyId:'buy-and-hold'});const next=await act(user,{}, {action:'propose',researchId:research.snapshot.state.research[0].id,quantity});return next.snapshot.state.orders[0];}
+async function queue(user='owner-a',quantity=1){const order=await proposal(user,quantity);await act(user,{}, {action:'approve',orderId:order.id});const result=await act(user,{}, {action:'queue',orderId:order.id});return result.snapshot.state.orders.find(item=>item.id===order.id)!;}
+function open(price=100){clock+=10000;market=[quoted('open',price)];}
+test('closed Yahoo proposal can be approved and explicitly queued without any fill',async()=>{const order=await queue();assert.equal(order.status,'queued');assert.equal(order.marketMode,'yahoo');assert.equal(Date.parse(order.queue!.expiresAt)-Date.parse(order.queue!.queuedAt),7*86400000);const before=structuredClone(rows.get('owner-a'));const result=await processQueuedOrders('owner-a',{});assert.equal(result.waiting,1);assert.equal(rows.get('owner-a')!.cash,before!.cash);assert.equal(rows.get('owner-a')!.orders[0].status,'queued');assert.ok(rows.get('owner-a')!.orders[0].queue?.lastCheckedAt);assert.equal(before!.cash,250000);});
+test('approval alone never grants unattended execution; queue requires exact recent approval',async()=>{const order=await proposal();await assert.rejects(act('owner-a',{}, {action:'queue',orderId:order.id}),/approve/);await act('owner-a',{}, {action:'approve',orderId:order.id});open();assert.equal((await processQueuedOrders('owner-a',{})).executed,0);assert.equal(rows.get('owner-a')!.orders[0].status,'approved');});
+test('queued paper order fills once on a fresh post-queue open-session Yahoo quote',async()=>{const order=await queue();open(100.5);const result=await processQueuedOrders('owner-a',{});assert.equal(result.executed,1);const state=rows.get('owner-a')!;assert.equal(state.cash,249899.5);assert.equal(state.positions[0].shares,1);assert.equal(state.orders[0].fill?.price,100.5);assert.equal(state.orders[0].status,'executed');assert.equal((await processQueuedOrders('owner-a',{})).executed,0);await assert.rejects(act('owner-a',{}, {action:'execute',orderId:order.id}),/already executed/);});
+test('queued fills recheck portfolio risk while independent authorizations survive earlier fills',async()=>{await queue();await queue();open();const result=await processQueuedOrders('owner-a',{});assert.equal(result.executed,2);assert.equal(rows.get('owner-a')!.positions[0].shares,2);});
+test('a gap beyond one percent returns queue to review with no fill',async()=>{await queue();open(102);const result=await processQueuedOrders('owner-a',{});assert.equal(result.review,1);assert.match(rows.get('owner-a')!.orders[0].reviewReason!,/1%/);assert.equal(rows.get('owner-a')!.cash,250000);});
+test('missing, stale, pre-queue and closed quotes leave the queue pending',async()=>{await queue();for(const next of [[],[{...quoted('open'),stale:true}],[quoted('open',100,clock-1000)],[quoted('closed')]]){market=next;assert.equal((await processQueuedOrders('owner-a',{})).waiting,1);assert.equal(rows.get('owner-a')!.orders[0].status,'queued');}});
+test('expired queue cannot fill even when a price later becomes eligible',async()=>{await queue();clock+=8*86400000;market=[quoted('open')];const result=await processQueuedOrders('owner-a',{});assert.equal(result.expired,1);assert.equal(rows.get('owner-a')!.orders[0].status,'expired');assert.equal(rows.get('owner-a')!.positions.length,0);});
+test('cancel removes unattended authorization and policy changes require new review',async()=>{const first=await queue();await act('owner-a',{}, {action:'reject',orderId:first.id});open();assert.equal((await processQueuedOrders('owner-a',{})).executed,0);const second=await queue();await act('owner-a',{}, {action:'policy',policy:{maxOrderValue:9000}});const order=rows.get('owner-a')!.orders.find(item=>item.id===second.id)!;assert.equal(order.status,'review');assert.equal(order.queue,undefined);});
+test('changed exact order cannot borrow previous queue consent',async()=>{await queue();rows.get('owner-a')!.orders[0].quantity=2;open();const result=await processQueuedOrders('owner-a',{});assert.equal(result.review,1);assert.equal(rows.get('owner-a')!.cash,250000);});
+test('concurrent queue processors commit a single fill through CAS',async()=>{await queue();open();const results=await Promise.all([processQueuedOrders('owner-a',{}),processQueuedOrders('owner-a',{})]);assert.equal(results.reduce((sum,result)=>sum+result.executed,0),1);assert.equal(rows.get('owner-a')!.positions[0].shares,1);assert.equal(results.reduce((sum,result)=>sum+result.conflicts,0),1);});
+test('failed CAS does not claim or persist an execution',async()=>{await queue();open();failCAS=true;const result=await processQueuedOrders('owner-a',{});assert.equal(result.executed,0);assert.equal(result.conflicts,1);assert.equal(rows.get('owner-a')!.cash,250000);});
+test('PRISM enforcement failure at queued execution leaves the ledger unchanged',async()=>{await queue();open();const result=await processQueuedOrders('owner-a',{PRISM_ENFORCE:'true'});assert.equal(result.review,1);assert.equal(rows.get('owner-a')!.orders[0].checks.find(check=>check.key==='prism')?.passed,false);assert.equal(rows.get('owner-a')!.cash,250000);});
+test('old as-of research is inspection-only; provider advancement invalidates old queue evidence',async()=>{const research=await act('owner-a',{}, {action:'strategy_research',symbol:'MSFT',asOf:'2026-10-15'});const proposal=await act('owner-a',{}, {action:'propose',researchId:research.snapshot.state.research[0].id,quantity:1});assert.equal(proposal.snapshot.state.orders[0].status,'blocked');await queue();latest='2026-10-19';clock=Date.parse('2026-10-20T15:00:00Z');market=[quoted('open')];const result=await processQueuedOrders('owner-a',{});assert.equal(result.review,1);assert.match(rows.get('owner-a')!.orders[0].reviewReason!,/now has/);});
+test('unavailable strategy validation fails closed',async()=>{await queue();open();denyHistory=true;const result=await processQueuedOrders('owner-a',{});assert.equal(result.review,1);assert.equal(rows.get('owner-a')!.cash,250000);});
+test('snapshots never process fills and the trusted runner only processes explicitly queued scopes',async()=>{await queue('owner-a');await proposal('owner-b');open();await snapshot('owner-a',{});assert.equal(rows.get('owner-a')!.positions.length,0);const result=await processAllQueuedOrders({});assert.equal(result.executed,1);assert.equal(rows.get('owner-b')!.positions.length,0);});
+test('synthetic migration rebuilds cash and inventory from Yahoo fills exactly once',()=>{const state=seededState(clock);delete state.yahooMigrationVersion;state.cash=123;state.positions=[{symbol:'NVDA',shares:220,costBasis:156}];const base={id:'synthetic',researchId:'old',symbol:'MSFT',side:'buy',quantity:1,price:100,notional:100,status:'executed',checks:[],evidenceIds:[],createdAt:new Date(clock).toISOString(),traceId:'old',fingerprint:'old',fill:{price:100,quantity:1,time:new Date(clock).toISOString()}} as Order;state.orders=[base,{...structuredClone(base),id:'yahoo',marketMode:'yahoo',fill:{price:110,quantity:1,time:new Date(clock+1).toISOString()}}];assert.equal(migrateYahooState(state,clock),true);assert.equal(state.orders.length,1);assert.equal(state.cash,249890);assert.deepEqual(state.positions,[{symbol:'MSFT',shares:1,costBasis:110}]);const after=structuredClone(state);assert.equal(migrateYahooState(state,clock),false);assert.deepEqual(state,after);assert.equal(state.audit[0].details?.removedSyntheticOrders,1);});
+
+test('waiting queues rotate so a sixth eligible order cannot starve',async()=>{
+  for(let index=0;index<6;index++)await queue('owner-a');
+  const state=rows.get('owner-a')!;
+  // First five older grants require a quote later than this provider observation;
+  // the sixth uses an independently authorized earlier timestamp.
+  const oldest=[...state.orders].reverse();
+  for(let index=0;index<6;index++){
+    oldest[index].queue!.queuedAt=new Date(clock+(index<5?10000:0)).toISOString();
+    oldest[index].queue!.lastCheckedAt=new Date(clock-60000+index).toISOString();
+    oldest[index].queue!.fingerprint=await (await import('../lib/permissions.ts')).fingerprintQueuedOrder(oldest[index],state);
+  }
+  clock+=5000;market=[quoted('open')];
+  const first=await processQueuedOrders('owner-a',{});assert.equal(first.waiting,5);assert.equal(first.executed,0);
+  const second=await processQueuedOrders('owner-a',{});assert.equal(second.executed,1);assert.equal(rows.get('owner-a')!.orders.find(order=>order.id===oldest[5].id)!.status,'executed');
+});
+test('portfolio cash is recalculated after each fill instead of reserving an impossible queue',async()=>{
+  await queue();await queue();const state=rows.get('owner-a')!;state.cash=100;state.portfolioVersion++;state.policy.maxPositionWeight=1;open();
+  const result=await processQueuedOrders('owner-a',{});assert.equal(result.executed,1);assert.equal(result.review,1);assert.equal(rows.get('owner-a')!.cash,0);
+});
+test('PRISM latency cannot fill an observation that became stale during the check',async t=>{
+  await queue();open();
+  t.mock.method(globalThis,'fetch',async(input:unknown)=>{if(String(input).includes('/guardrails/evaluate')){clock+=180000;return Response.json({blocked:false,evaluated:true});}return Response.json({ok:true});});
+  const result=await processQueuedOrders('owner-a',{PRISM_API_KEY:'test-credential',PRISM_PROJECT_ID:'test-project',PRISM_ENFORCE:'true'});
+  assert.equal(result.executed,0);assert.equal(result.waiting,1);assert.equal(rows.get('owner-a')!.cash,250000);
+});

@@ -1,12 +1,14 @@
+import { marketSnapshot } from './helpers/market-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EVIDENCE, marketSnapshot, seededState } from '../lib/fixtures.ts';
+import { EVIDENCE, seededState } from '../lib/fixtures.ts';
 import { canonicalSample, evaluateOrder, fingerprintOrder } from '../lib/permissions.ts';
 import type { Order, Quote } from '../lib/types.ts';
 
 const now = Date.parse('2026-10-16T18:00:00Z');
 function setup() {
   const state = seededState(now);
+  state.positions=[{symbol:'MSFT',shares:10,costBasis:480},{symbol:'AAPL',shares:10,costBasis:218}];
   const evidence = EVIDENCE.map(source => ({ ...source, publishedAt: '2026-10-15' }));
   const research = canonicalSample('NVDA', evidence, 'market-test', now);
   state.research.unshift(research);

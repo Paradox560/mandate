@@ -11,7 +11,8 @@ export async function workspaceStorageKey(userId: string, workspace: WorkspaceMo
 }
 
 export function workspaceMarketMode(workspace: WorkspaceMode, requested: MarketMode = 'yahoo'): MarketMode {
-  return workspace === 'demo' ? 'replay' : requested;
+  if(requested !== 'yahoo') throw new Error('Synthetic replay is retired. Use Yahoo Finance prices.');
+  return 'yahoo';
 }
 
 /** Run this before any workspace read or provider call. */
